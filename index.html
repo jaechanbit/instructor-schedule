@@ -173,6 +173,35 @@
     border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700;
   }
 
+  /* ── 중복 경고 ────────────────────────────── */
+  .dup-banner{
+    margin-top:var(--s3);border:1.5px solid #e8b955;border-radius:14px;
+    background:linear-gradient(180deg,#fff9ec,#fff2d8);padding:var(--s2) var(--s3);
+    display:flex;gap:var(--s2);align-items:flex-start;box-shadow:0 8px 20px rgba(170,115,0,.14);
+  }
+  .dup-banner .ic{font-size:21px;line-height:1.2;flex:0 0 auto}
+  .dup-banner .txt{flex:1 1 auto;min-width:0}
+  .dup-banner b{color:#7a4b00;font-size:15px;letter-spacing:-.01em}
+  .dup-banner p{margin:4px 0 0;font-size:13.5px;color:#6b4a12;line-height:1.55}
+  .dup-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .dup-chip{
+    border:1px solid #e0b04a;background:#fff;color:#7a4b00;border-radius:999px;
+    padding:0 12px;min-height:36px;font-size:12.5px;font-weight:800;white-space:nowrap;
+    display:inline-flex;align-items:center;
+  }
+  .dup-chip:hover{background:#fff6e0}
+  .dup-chip.on{background:#7a4b00;border-color:#7a4b00;color:#fff}
+  .dup-actions{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;flex:0 0 auto}
+  .dup-actions .btn{min-height:38px;padding:0 13px;font-size:13px;border-radius:9px}
+  .dup-flag{
+    display:inline-flex;align-items:center;gap:3px;background:#fff3d6;color:#7a4b00;
+    border:1px solid #e8b955;border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:800;
+  }
+  .card.is-dup{box-shadow:inset 0 0 0 2px #e8b955, 0 1px 2px rgba(16,24,40,.05)}
+  .ev.is-dup{background:#fff3d6;color:#7a4b00;box-shadow:inset 0 0 0 1.5px #e0b04a}
+  tbody tr.is-dup td{background:#fffaee}
+  tbody tr.is-dup:hover td{background:#fff5dd}
+
   /* ── 강사 요약 ────────────────────────────── */
   #summary{margin-top:var(--s3);display:none}
   #summary.show{display:block}
@@ -394,6 +423,8 @@
 
 <main class="wrap">
 
+  <div id="dupBanner" hidden></div>
+
   <section class="panel" aria-label="기관·강사·보기 필터">
     <div class="tabs" id="orgTabs" role="tablist" aria-label="기관 선택"></div>
     <div class="row2">
@@ -411,6 +442,7 @@
         <button data-view="cal" aria-pressed="false">캘린더</button>
         <button data-view="table" aria-pressed="false">표</button>
       </div>
+      <button class="dup-chip" id="dupChip" hidden aria-pressed="false">⚠ 중복 0</button>
     </div>
     <div class="err-line" id="errLine" role="status"></div>
     <div class="upnote" id="upNote" hidden>
@@ -536,7 +568,8 @@ let BASE = [];        // 시트(또는 내장) 데이터
 let EXTRA = [];       // 업로드로 추가된 데이터
 let ROWS = [];        // 화면에 쓰는 최종 목록
 let SOURCE = 'embedded';
-let state = { org:'전체', teacher:'', q:'', view:'card', month:null, day:null };
+let state = { org:'전체', teacher:'', q:'', view:'card', month:null, day:null, dupOnly:false };
+let DUPS = { groups: [], rowCount: 0 };
 
 /* =========================================================================
    4) 유틸
@@ -720,6 +753,7 @@ function orgList(){
   return Object.keys(cnt).sort((a,b)=> (cnt[b]-cnt[a]) || a.localeCompare(b,'ko'));
 }
 function matches(r){
+  if (state.dupOnly && !(r._dups && r._dups.length)) return false;
   if (state.org !== '전체' && r._org !== state.org) return false;
   if (state.teacher && r['주강사'] !== state.teacher && r['보조강사'] !== state.teacher) return false;
   const q = state.q.trim().toLowerCase();
@@ -738,6 +772,100 @@ function matches(r){
 const filtered = () => ROWS.filter(matches);
 
 /* =========================================================================
+   7-B) 강사 일정 중복 감지
+   ========================================================================= */
+function computeDups(){
+  const map = new Map();
+  ROWS.forEach(r => {
+    if (!r._d) return;
+    const day = ymd(r._d);
+    [r['주강사'], r['보조강사']].forEach(t => {
+      const name = String(t || '').trim();
+      if (!name) return;
+      const k = day + '|' + name;
+      if (!map.has(k)) map.set(k, { day, name, rows: [], date: r._d });
+      map.get(k).rows.push(r);
+    });
+  });
+  ROWS.forEach(r => { r._dups = []; });
+  const groups = Array.from(map.values()).filter(g => g.rows.length > 1);
+  groups.sort((a,b)=> a.day.localeCompare(b.day) || a.name.localeCompare(b.name,'ko'));
+  const affected = [];
+  groups.forEach(g => {
+    g.rows.forEach(r => {
+      if (affected.indexOf(r) < 0) affected.push(r);
+      g.rows.forEach(o => { if (o !== r && r._dups.indexOf(o) < 0) r._dups.push(o); });
+    });
+  });
+  DUPS = { groups, rowCount: affected.length };
+  return DUPS;
+}
+function dupTitle(r){
+  if (!r._dups || !r._dups.length) return '';
+  return '일정 중복 · ' + r._dups.map(o => o._org + ' ' + o['회차'] + '회차 ' + (o['강의과목']||'')).join(' / ');
+}
+function dupDayLabel(g){
+  const d = g.date;
+  return d ? (d.getMonth()+1) + '.' + d.getDate() + ' ' + g.name : g.name;
+}
+function renderDupBanner(){
+  const box = $('#dupBanner');
+  const chip = $('#dupChip');
+  const n = DUPS.rowCount;
+  if (!n) { box.hidden = true; box.innerHTML = ''; chip.hidden = true; return; }
+  chip.hidden = false;
+  chip.textContent = '⚠ 중복 ' + n + '건';
+  chip.classList.toggle('on', !!state.dupOnly);
+  chip.setAttribute('aria-pressed', state.dupOnly ? 'true' : 'false');
+  const first = DUPS.groups[0];
+  const orgs = first ? Array.from(new Set(first.rows.map(r=>r._org))).join('·') : '';
+  box.hidden = false;
+  box.innerHTML =
+    '<div class="dup-banner" role="alert">' +
+      '<div class="ic" aria-hidden="true">⚠️</div>' +
+      '<div class="txt">' +
+        '<b>강사 일정 중복 ' + n + '건 감지</b>' +
+        '<p>같은 날짜에 같은 강사가 두 건 이상 배정되어 있습니다. 겹치는 기관·회차를 확인해 주세요.' +
+          (first ? ' 예: ' + esc(dupDayLabel(first)) + '(' + esc(orgs) + ')' : '') +
+        '</p>' +
+        '<div class="dup-list">' +
+          DUPS.groups.slice(0,6).map((g,i) =>
+            '<button class="dup-chip" data-g="' + i + '" title="' + esc(g.rows.map(r=>r._org+' '+r['회차']+'회차 '+r['강의과목']).join(' / ')) + '">' +
+              esc(dupDayLabel(g)) + ' · ' + esc(Array.from(new Set(g.rows.map(r=>r._org))).join('·')) +
+            '</button>'
+          ).join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="dup-actions">' +
+        '<button class="btn primary" id="dupOnlyBtn">' + (state.dupOnly ? '전체 보기' : '중복만 보기') + '</button>' +
+      '</div>' +
+    '</div>';
+  box.querySelectorAll('[data-g]').forEach(b => {
+    b.onclick = () => {
+      const g = DUPS.groups[+b.dataset.g];
+      if (!g) return;
+      const d = g.date;
+      state.q = (d ? (d.getMonth()+1)+'.'+d.getDate()+' ' : '') + g.name;
+      state.dupOnly = false; state.org = '전체'; state.teacher = '';
+      $('#q').value = state.q;
+      $('#searchWrap').classList.add('has');
+      $('#teacherSel').value = '';
+      renderDupBanner(); renderTeacherSelect(); renderSummary(); renderView();
+      const v = $('#viewArea'); if (v) v.scrollIntoView({ behavior:'smooth', block:'start' });
+    };
+  });
+  const ob = box.querySelector('#dupOnlyBtn');
+  if (ob) ob.onclick = () => toggleDupOnly();
+}
+function toggleDupOnly(){
+  state.dupOnly = !state.dupOnly;
+  state.org = '전체'; state.teacher = ''; state.q = '';
+  $('#q').value = ''; $('#searchWrap').classList.remove('has');
+  renderTeacherSelect(); renderDupBanner(); renderSummary(); renderView();
+  const v = $('#viewArea'); if (v) v.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* =========================================================================
    8) 렌더
    ========================================================================= */
 function applyConfig(){
@@ -750,7 +878,8 @@ function applyConfig(){
 }
 function onDataChanged(){
   state.month = null; state.day = null;
-  renderTabs(); renderTeacherSelect(); renderStats(); renderSummary(); renderView(); renderFoot(); renderUpNote();
+  computeDups();
+  renderTabs(); renderTeacherSelect(); renderStats(); renderDupBanner(); renderSummary(); renderView(); renderFoot(); renderUpNote();
 }
 function renderStats(){
   const total = ROWS.length;
@@ -817,19 +946,23 @@ function renderSummary(){
 }
 function cardFor(r){
   const dTxt = r._d ? (r._d.getMonth()+1)+'.'+r._d.getDate()+' ('+ (r['요일'] || DOW[r._d.getDay()]) +')' : (r['일자']||'');
-  const c = el('article','card t-' + (r['훈련내용']||''));
+  const dup = !!(r._dups && r._dups.length);
+  const c = el('article','card t-' + (r['훈련내용']||'') + (dup ? ' is-dup' : ''));
   c.innerHTML =
     '<div class="c-top">'+
       '<span class="pill date num">'+esc(dTxt)+'</span>'+
       '<span class="pill sec num">'+esc(r['회차'])+'회차</span>'+
       (r['훈련내용'] ? '<span class="pill type '+esc(r['훈련내용'])+'">'+esc(r['훈련내용'])+'</span>' : '')+
       (r._uploaded ? '<span class="pill sec">업로드</span>' : '')+
+      (dup ? '<span class="dup-flag" title="'+esc(dupTitle(r))+'">⚠️ 일정 중복</span>' : '')+
     '</div>'+
     '<h3 class="c-title">'+esc(r['강의과목'])+'</h3>'+
     '<div class="c-meta">'+
       '<span><b>'+esc(r['주강사']||'강사 미정')+'</b>'+(r['주강사소속']?' <span class="mut">'+esc(r['주강사소속'])+'</span>':'')+'</span>'+
       (r['보조강사'] ? '<span>보조 <b>'+esc(r['보조강사'])+'</b>'+(r['보조강사소속']?' <span class="mut">'+esc(r['보조강사소속'])+'</span>':'')+'</span>' : '')+
     '</div>'+
+    (dup ? '<div class="c-meta" style="margin-top:6px;color:#7a4b00;font-weight:600">⚠️ 같은 날 겹치는 일정: '+
+      esc(r._dups.map(o=>o._org+' '+o['회차']+'회차 '+(o['강의과목']||'')).join(' / '))+'</div>' : '')+
     '<div class="c-hours">'+
       (r['이론']?'<span class="hchip">이론 <b>'+r['이론']+'</b></span>':'')+
       (r['실습']?'<span class="hchip">실습 <b>'+r['실습']+'</b></span>':'')+
@@ -857,7 +990,7 @@ function renderView(){
 function renderCards(area, rows){
   const head = el('div','sec-title');
   const tot = rows.reduce((s,r)=>s+r._sum,0);
-  head.innerHTML = '<h2>일정 카드 · '+rows.length+'건</h2><span class="hint num">합계 '+tot+'시간</span>';
+  head.innerHTML = '<h2>일정 카드 · '+rows.length+'건'+(state.dupOnly?' <span class="dup-flag" style="vertical-align:2px">⚠️ 중복만</span>':'')+'</h2><span class="hint num">합계 '+tot+'시간</span>';
   area.appendChild(head);
   if (!rows.length){ area.appendChild(el('div','empty',emptyBox())); return; }
   const g = el('div','cards');
@@ -901,8 +1034,9 @@ function renderCalendar(area, rows){
     if (state.day === key) cell.classList.add('sel');
     cell.appendChild(el('div','cal-day num', String(d)));
     items.slice(0,3).forEach(r => {
-      const b = el('button','ev s-' + (r['훈련내용']||''), '<span class="ev-n">'+esc(r['회차'])+'</span>'+esc((r['강의과목']||'').slice(0,16)));
-      b.title = r['강의과목']+' · '+r['주강사'];
+      const dup = !!(r._dups && r._dups.length);
+      const b = el('button','ev s-' + (r['훈련내용']||'') + (dup ? ' is-dup' : ''), (dup?'⚠️ ':'')+'<span class="ev-n">'+esc(r['회차'])+'</span>'+esc((r['강의과목']||'').slice(0,16)));
+      b.title = (dup ? dupTitle(r) + ' · ' : '') + r['강의과목']+' · '+r['주강사'];
       b.onclick = ev => { ev.stopPropagation(); state.day = key; renderView(); };
       cell.appendChild(b);
     });
@@ -940,11 +1074,13 @@ function renderTable(area, rows){
   t.innerHTML = '<thead><tr>'+['회차','일자','기관','강의과목','이론','실습','현장실습','총시수','주강사','보조강사','훈련내용','상태'].map(h=>'<th scope="col">'+h+'</th>').join('')+'</tr></thead>';
   const tb = el('tbody');
   rows.forEach(r=>{
+    const dup = !!(r._dups && r._dups.length);
     const tr = el('tr');
+    if (dup) tr.className = 'is-dup';
     const dTxt = r._d ? (r._d.getMonth()+1)+'.'+r._d.getDate()+'('+(r['요일']||DOW[r._d.getDay()])+')' : r['일자'];
     tr.innerHTML =
       '<td class="num">'+esc(r['회차'])+'</td>'+
-      '<td class="num" style="white-space:nowrap">'+esc(dTxt)+'</td>'+
+      '<td class="num" style="white-space:nowrap">'+esc(dTxt)+(dup?' <span class="dup-flag" title="'+esc(dupTitle(r))+'">⚠️</span>':'')+'</td>'+
       '<td style="white-space:nowrap">'+esc(r._org)+'</td>'+
       '<td class="tl">'+esc(r['강의과목'])+'</td>'+
       '<td class="num">'+(r['이론']||'·')+'</td>'+
@@ -1001,6 +1137,7 @@ function wire(){
   });
   $('#resyncBtn').onclick = () => syncFromSheet();
   $('#upNoteReset').onclick = () => { resetUploads(); };
+  $('#dupChip').onclick = () => toggleDupOnly();
   wireUpload();
 }
 
@@ -1374,6 +1511,92 @@ async function parseHwpxFile(file){
 }
 
 /* ── PDF 파서 ── */
+const PDF_HDR = [
+  ['회차', /^(회차|순번|번호|차시)/],
+  ['일자', /^(일자|날짜|일시|교육일)/],
+  ['과목', /(강의과목|과목명|^과목$|강의내용|훈련과목)/],
+  ['현장실습', /현장실습/],
+  ['현장견학', /(현장견학|견학)/],
+  ['이론', /^이론/],
+  ['실습', /^실습/],
+  ['강사', /(강사|교수|지도자)/],
+  ['전문', /^전문$/],
+  ['소양', /^소양$/],
+  ['취업', /^취업$/],
+  ['온라인', /^온라인/],
+  ['오프라인', /오프라인/]
+];
+function pdfGroupLines(items){
+  const lines = [];
+  items.sort((a,b)=> b.y - a.y || a.x - b.x);
+  items.forEach(it => {
+    const tol = Math.max(3, it.h * 0.55);
+    let line = lines.find(l => Math.abs(l.y - it.y) <= tol);
+    if (!line){ line = { y: it.y, items: [] }; lines.push(line); }
+    line.items.push(it);
+  });
+  lines.forEach(l => {
+    l.y = l.items.reduce((s,i)=>s+i.y,0)/l.items.length;
+    l.items.sort((a,b)=>a.x-b.x);
+    const cells = []; let cur = null;
+    l.items.forEach(it => {
+      const gap = cur ? it.x - cur.x1 : 0;
+      if (cur && gap < Math.max(2.5, it.h*0.5)) {
+        cur.s += (gap > it.h*0.28 ? ' ' : '') + it.s;
+        cur.x1 = Math.max(cur.x1, it.x + it.w);
+      } else {
+        cur = { x0: it.x, x1: it.x + it.w, s: it.s };
+        cells.push(cur);
+      }
+    });
+    l.cells = cells.map(c => ({ x0:c.x0, x1:c.x1, s:c.s.replace(/\s+/g,' ').trim() })).filter(c => c.s);
+  });
+  lines.sort((a,b)=> b.y - a.y);
+  return lines;
+}
+function pdfBuildColumns(cells){
+  const cols = [];
+  cells.forEach(c => {
+    const mid = (c.x0 + c.x1)/2;
+    const label = c.s.replace(/\s+/g,'');
+    let col = cols.find(k => Math.abs(k.mid - mid) < 16);
+    if (col){ col.labels.push(label); col.mid = (col.mid + mid)/2; }
+    else cols.push({ mid, labels:[label] });
+  });
+  cols.sort((a,b)=>a.mid-b.mid);
+  cols.forEach((c,i)=>c.idx = i);
+  PDF_HDR.forEach(([key, re]) => {
+    const hit = cols.find(c => !c.key && c.labels.some(l => re.test(l)));
+    if (hit) hit.key = key;
+  });
+  return cols;
+}
+function pdfLinesToRows(lines, cols){
+  const numCol = cols.find(c => c.key === '회차');
+  const dateCol = cols.find(c => c.key === '일자');
+  const nearest = x => {
+    let best = -1, bd = 1e9;
+    cols.forEach(c => { const d = Math.abs(c.mid - x); if (d < bd){ bd = d; best = c.idx; } });
+    return bd <= 48 ? best : -1;
+  };
+  const rows = [];
+  lines.forEach(l => {
+    if (!l.cells.length) return;
+    const at = idx => { const c = l.cells.find(cc => nearest((cc.x0+cc.x1)/2) === idx); return c ? c.s : ''; };
+    const rowNum = numCol ? at(numCol.idx).replace(/\s/g,'') : '';
+    const dateTxt = dateCol ? at(dateCol.idx) : '';
+    const starts = /^\d{1,2}$/.test(rowNum) || (!numCol && /\d{1,2}\s*\/\s*\d{1,2}/.test(dateTxt));
+    if (starts) rows.push(new Array(cols.length).fill(''));
+    if (!rows.length) return;
+    const row = rows[rows.length-1];
+    l.cells.forEach(c => {
+      const idx = nearest((c.x0 + c.x1)/2);
+      if (idx < 0) return;
+      row[idx] = row[idx] ? row[idx] + ' ' + c.s : c.s;
+    });
+  });
+  return rows;
+}
 async function parsePdfFile(file){
   await loadScript(CDN_PDFJS, 'pdfjsLib');
   const lib = window.pdfjsLib;
@@ -1381,135 +1604,48 @@ async function parsePdfFile(file){
   lib.GlobalWorkerOptions.workerSrc = CDN_PDFJS_WORKER;
   const data = new Uint8Array(await file.arrayBuffer());
   const pdf = await lib.getDocument({ data }).promise;
-  const items = [];
   const pageCount = Math.min(pdf.numPages, 20);
-  for (let p=1; p<=pageCount; p++){
+  let colDefs = null, itemCount = 0;
+  const cellRows = [];
+  for (let p = 1; p <= pageCount; p++){
     const page = await pdf.getPage(p);
     const tc = await page.getTextContent();
+    const items = [];
     (tc.items || []).forEach(it => {
       const s = String(it.str || '');
       if (!s.trim()) return;
       const tr = it.transform || [1,0,0,1,0,0];
-      items.push({ x: tr[4], y: tr[5], w: it.width || 0, s: s.trim(), p, h: Math.abs(tr[3]) || 10 });
+      items.push({ x: tr[4], y: tr[5], w: it.width || 0, s: s.trim(), h: Math.abs(tr[3]) || 10 });
     });
+    itemCount += items.length;
+    if (!items.length) continue;
+    const lines = pdfGroupLines(items);
+    const hdrCells = []; let lastHeader = -1;
+    lines.forEach((l, i) => {
+      if (i > 15) return;
+      const txt = l.cells.map(c => c.s).join('').replace(/\s+/g,'');
+      const isData = /\d{1,2}\s*\/\s*\d{1,2}/.test(txt) || /^\d{1,2}$/.test(txt);
+      if (!isData && PDF_HDR.some(([,re]) => re.test(txt))) {
+        lastHeader = Math.max(lastHeader, i);
+        l.cells.forEach(c => hdrCells.push(c));
+      }
+    });
+    if (!colDefs && hdrCells.length >= 3) colDefs = pdfBuildColumns(hdrCells);
+    if (!colDefs) continue;
+    pdfLinesToRows(lines.slice(lastHeader + 1), colDefs)
+      .filter(r => r.some(v => v && v.trim()))
+      .forEach(r => cellRows.push(r));
   }
-  if (items.length < 20) throw new Error('이 PDF에는 텍스트가 거의 없습니다(스캔 이미지 PDF). 표를 읽을 수 없으니 HWPX 원본이나 텍스트 PDF로 올려 주세요.');
-  // 줄 단위로 묶기
-  const lines = [];
-  items.sort((a,b)=> a.p-b.p || b.y-a.y || a.x-b.x);
-  items.forEach(it => {
-    const tol = Math.max(3, it.h*0.6);
-    let line = lines.find(l => l.p === it.p && Math.abs(l.y - it.y) <= tol);
-    if (!line) { line = { p: it.p, y: it.y, items: [] }; lines.push(line); }
-    line.items.push(it);
-  });
-  lines.forEach(l => {
-    l.items.sort((a,b)=>a.x-b.x);
-    l.y = l.items.reduce((s,i)=>s+i.y,0)/l.items.length;
-  });
-  lines.sort((a,b)=> a.p-b.p || b.y-a.y);
-  // 줄 안에서 셀 묶기 (x 간격 기준)
-  lines.forEach(l => {
-    const cells = []; let cur = null;
-    l.items.forEach(it => {
-      const gap = cur ? it.x - (cur.x + cur.w) : 0;
-      const samePiece = cur && gap < Math.max(2.5, it.h*0.55);
-      if (samePiece) { cur.s += (gap > it.h*0.25 ? ' ' : '') + it.s; cur.w = (it.x + it.w) - cur.x; }
-      else { cur = { x: it.x, w: it.w, s: it.s }; cells.push(cur); }
-    });
-    l.cells = cells.map(c => ({ x0:c.x, x1:c.x+c.w, s:c.s.trim() })).filter(c => c.s);
-  });
-  // 헤더 줄 찾기 (회차·과목 포함)
-  let headerIdx = -1;
-  lines.forEach((l,i) => {
-    const t = l.cells.map(c=>c.s).join('');
-    if (/회차/.test(t) && /(과목|강의)/.test(t) && headerIdx < 0) headerIdx = i;
-  });
-  if (headerIdx < 0) throw new Error('표의 머리글(회차·강의과목)을 찾지 못했습니다. 표가 있는 PDF인지 확인해 주세요.');
-  // 열 중심 좌표 계산 (헤더 줄 + 다음 1줄)
-  const headerCells = [...lines[headerIdx].cells, ...((lines[headerIdx+1]||{cells:[]}).cells)];
-  const cols = [];
-  headerCells.forEach(c => {
-    const mid = (c.x0 + c.x1)/2;
-    const found = cols.find(k => Math.abs(k.mid - mid) < 18);
-    if (found) { found.mid = (found.mid + mid)/2; }
-    else cols.push({ mid, label: c.s.replace(/\s+/g,'') });
-  });
-  cols.sort((a,b)=>a.mid-b.mid);
-  const labelToCol = {};
-  cols.forEach((c,i) => { labelToCol[c.label] = i; c.idx = i; });
-  const findCol = re => { const hit = cols.find(c=>re.test(c.label)); return hit ? hit.idx : -1; };
-  const ci = {
-    회차: findCol(/회차|순번|번호/), 일자: findCol(/일자|날짜|일시/), 과목: findCol(/과목|강의내용/),
-    이론: findCol(/^이론/), 실습: findCol(/^실습/), 현장실습: findCol(/현장실습/), 현장견학: findCol(/현장견학|견학/),
-    강사: findCol(/강사|교수/), 전문: findCol(/^전문/), 소양: findCol(/^소양/), 취업: findCol(/^취업/),
-    온라인: findCol(/^온라인/), 오프라인: findCol(/오프라인/)
-  };
-  const nearestCol = x => {
-    let best = -1, bd = 1e9;
-    cols.forEach(c => { const d = Math.abs(c.mid - x); if (d < bd) { bd = d; best = c.idx; } });
-    return bd <= 60 ? best : -1;
-  };
-  // 행 묶기: 회차 열에 숫자가 나타나면 새 행
-  const dataRows = [];
-  for (let li = headerIdx+1; li < lines.length; li++){
-    const l = lines[li];
-    if (!l.cells.length) continue;
-    const first = l.cells[0];
-    const rowNumText = (ci['회차'] >= 0 && l.cells.find(c => nearestCol((c.x0+c.x1)/2) === ci['회차']) || {}).s || '';
-    const isNew = /^\d{1,2}$/.test(String(rowNumText).replace(/\s/g,'')) || (ci['회차'] < 0 && /^\d{1,2}$/.test(first.s.replace(/\s/g,'')));
-    if (isNew || !dataRows.length) dataRows.push({ cells: [] });
-    const row = dataRows[dataRows.length-1];
-    l.cells.forEach(c => {
-      const idx = nearestCol((c.x0+c.x1)/2);
-      if (idx < 0) return;
-      if (row.cells[idx] == null) row.cells[idx] = c.s;
-      else row.cells[idx] += ' ' + c.s;
-    });
-  }
-  const nCols = cols.length;
-  const cellRows = dataRows.map(r => {
-    const arr = new Array(nCols).fill('');
-    r.cells.forEach((v,i) => { if (v != null) arr[i] = v; });
-    return arr;
-  }).filter(r => r.some(v => v && v.trim()));
-  if (!cellRows.length) throw new Error('표의 데이터 행을 읽지 못했습니다.');
+  if (itemCount < 20) throw new Error('이 PDF에는 텍스트가 거의 없습니다(스캔 이미지 PDF). 표를 읽을 수 없으니 HWPX 원본이나 텍스트 PDF로 올려 주세요.');
+  if (!colDefs) throw new Error('표의 머리글(회차·강의과목)을 찾지 못했습니다. 표가 들어 있는 PDF인지 확인해 주세요.');
+  if (!cellRows.length) throw new Error('표의 데이터 행을 읽지 못했습니다. PDF 안의 표가 일반 텍스트로 저장되어 있는지 확인해 주세요.');
   const remap = {};
-  ['회차','일자','과목','이론','실습','현장실습','현장견학','강사','전문','소양','취업','온라인','오프라인']
-    .forEach(k => { if (ci[k] >= 0) remap[k] = ci[k]; });
-  const ok = ['회차','일자','과목','이론','실습','강사'].every(k => remap[k] != null);
-  const out = ok ? rowsToScheduleWith(cellRows, remap) : rowsToSchedule(cellRows, { year: num($('#upYear').value) || 2027 });
-  return out;
-}
-function rowsToScheduleWith(cellRows, map){
-  const year = num($('#upYear').value) || 2027;
-  const out = [];
-  const get = (cells,k) => (map[k] != null ? String(cells[map[k]] == null ? '' : cells[map[k]]) : '');
-  cellRows.forEach(cells => {
-    const joined = cells.join(' ').replace(/\s+/g,'');
-    if (/^(합계|총계|소계)/.test(joined)) return;
-    if (isHeaderRow(cells)) return;
-    const subject = get(cells,'과목').replace(/\s+/g,' ').trim();
-    const dateRaw = get(cells,'일자');
-    if (!subject && !dateRaw) return;
-    const d = dateText(dateRaw, year);
-    const teacher = parseTeachers(get(cells,'강사'));
-    const mark = k => isMark(get(cells,k));
-    const type = mark('전문') ? '전문' : mark('소양') ? '소양' : mark('취업') ? '취업' : '';
-    const mode = mark('온라인') ? '온라인' : mark('오프라인') ? '오프라인' : '';
-    out.push({
-      '회차': num(get(cells,'회차')) || (out.length+1),
-      '일자': d ? ymd(d) : dateRaw,
-      '요일': d ? DOW[d.getDay()] : '',
-      '강의과목': subject,
-      '이론': num(get(cells,'이론')), '실습': num(get(cells,'실습')),
-      '현장실습': num(get(cells,'현장실습')), '현장견학': num(get(cells,'현장견학')),
-      '주강사': teacher.main, '주강사소속': teacher.mainOrg,
-      '보조강사': teacher.sub, '보조강사소속': teacher.subOrg,
-      '훈련내용': type, '온오프라인': mode, '상태': '예정'
-    });
+  PDF_HDR.forEach(([key]) => {
+    const hit = colDefs.find(c => c.key === key);
+    if (hit) remap[key] = hit.idx;
   });
-  return out;
+  const need = ['회차','일자','과목','이론','실습','강사'].every(k => remap[k] != null);
+  return need ? rowsToScheduleWith(cellRows, remap) : rowsToSchedule(cellRows, { year: num($('#upYear').value) || 2027 });
 }
 
 /* =========================================================================
