@@ -290,26 +290,33 @@
   .cal-cell.sat .cal-day{color:#2f5fc4}
   .cal-cell.today .cal-day{background:#111a36;color:#fff;border-radius:6px;display:inline-block;padding:0 6px}
   .ev{
-    display:block;width:100%;max-width:100%;min-width:0;text-align:left;border:0;border-radius:7px;
-    padding:3px 5px;margin-bottom:3px;font-size:11.5px;font-weight:700;line-height:1.35;
-    background:var(--brand-soft);color:#22358f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    display:flex;align-items:center;gap:4px;width:100%;max-width:100%;min-width:0;text-align:left;
+    border:0;border-radius:6px;padding:2px 5px;margin-bottom:3px;
+    font-size:11.5px;font-weight:700;line-height:1.45;
+    background:var(--brand-soft);color:#22358f;overflow:hidden;white-space:nowrap;
   }
-  /* 모바일: 7열이 화면 폭에 딱 맞도록 칩을 날짜+개수 도트로 축약 */
+  .ev-n{font-weight:800;font-variant-numeric:tabular-nums;opacity:.9;flex:0 0 auto}
+  .ev-org{
+    flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:-.02em;
+    background:rgba(17,26,54,.08);border-radius:4px;padding:0 3px;color:#34406b;
+  }
+  .ev-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* 모바일: 7열이 화면 폭에 딱 맞도록 '전북15' 식 짧은 회차 배지만 */
   @media(max-width:640px){
-    .cal-cell{min-height:66px;padding:4px 3px}
+    .cal-cell{min-height:74px;padding:4px 3px 6px}
     .cal-cell.sel{border-radius:6px}
     .cal-day{font-size:11.5px;margin:0 0 3px 1px}
     .cal-dow div{font-size:11px;padding:7px 0}
     .ev{
-      width:9px;height:9px;padding:0;margin:0 2px 2px 0;border-radius:50%;
-      display:inline-block;text-indent:-9999px;overflow:hidden;
-      background:var(--brand);box-shadow:0 0 0 1px rgba(47,79,224,.25);
+      display:flex;align-items:center;justify-content:center;gap:1px;
+      width:100%;max-width:100%;height:15px;padding:0 2px;margin:0 0 2px 0;border-radius:4px;
+      font-size:9.5px;line-height:15px;overflow:hidden;white-space:nowrap;
     }
-    .ev.s-소양{background:#0f9e95;box-shadow:0 0 0 1px rgba(15,158,149,.25)}
-    .ev.s-취업{background:#e19a00;box-shadow:0 0 0 1px rgba(225,154,0,.3)}
-    .ev.is-dup{background:#c2410c;box-shadow:0 0 0 1.5px #7a4b00}
-    .ev .ev-n{display:none}
-    .ev-more{display:inline;font-size:10.5px;padding-left:0;color:var(--ink-3)}
+    .ev-n{font-size:9.5px;opacity:1}
+    .ev-org{font-size:8.5px;background:transparent;padding:0;color:inherit;opacity:.85;letter-spacing:-.04em}
+    .ev-t{display:none}
+    .ev-more{display:block;font-size:10px;padding:0;margin-top:1px;color:var(--ink-3);text-align:center}
+    #dayDetail .dd-head{font-size:14px}
   }
   .ev.s-소양{background:var(--teal-soft);color:#0b635c}
   .ev.s-취업{background:var(--amber-soft);color:#8a5200}
@@ -590,7 +597,7 @@ let BASE = [];        // 시트(또는 내장) 데이터
 let EXTRA = [];       // 업로드로 추가된 데이터
 let ROWS = [];        // 화면에 쓰는 최종 목록
 let SOURCE = 'embedded';
-let state = { org:'전체', teacher:'', q:'', view:'card', month:null, day:null, dupOnly:false };
+let state = { org:'전체', teacher:'', q:'', view:'card', month:null, day:null, dayInit:false, dupOnly:false };
 let DUPS = { groups: [], rowCount: 0 };
 
 /* =========================================================================
@@ -899,7 +906,7 @@ function applyConfig(){
   if (og && og.content !== CONFIG.title) og.content = CONFIG.title;
 }
 function onDataChanged(){
-  state.month = null; state.day = null;
+  state.month = null; state.day = null; state.dayInit = false;
   computeDups();
   renderTabs(); renderTeacherSelect(); renderStats(); renderDupBanner(); renderSummary(); renderView(); renderFoot(); renderUpNote();
 }
@@ -1019,77 +1026,120 @@ function renderCards(area, rows){
   rows.forEach((r,i)=> { const c = cardFor(r); if(i<40) c.classList.add('reveal'); g.appendChild(c); });
   area.appendChild(g);
 }
+function orgShort(o){
+  const s = String(o || '').replace(/\s/g, '');
+  const cut = s.replace(/새로일하기|고부가가치|여성인력|센터|학원|연구소|컨설팅/g, '');
+  if (/^전북새일/.test(s)) return '전북';
+  if (/^전주새일/.test(s)) return '전주';
+  if (/^군산새일/.test(s)) return '군산';
+  if (/^익산새일/.test(s)) return '익산';
+  return (cut || s).slice(0, 2);
+}
 function renderCalendar(area, rows){
   if (!state.month) {
-    const first = rows.find(r=>r._d) || ROWS.find(r=>r._d);
+    const first = rows.find(r => r._d) || ROWS.find(r => r._d);
     const d = first && first._d ? first._d : new Date();
-    state.month = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    state.month = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
   }
   const [yy, mm] = state.month.split('-').map(Number);
   const head = el('div','sec-title');
-  head.innerHTML = '<h2>캘린더</h2><span class="hint">'+rows.length+'건 표시</span>';
+  head.innerHTML = '<h2>캘린더</h2><span class="hint num">' + rows.length + '건 표시</span>';
   area.appendChild(head);
 
+  const byDay = {};
+  rows.forEach(r => { if (!r._d) return; const k = ymd(r._d); (byDay[k] = byDay[k] || []).push(r); });
+
+  // 처음 캘린더를 열 때: 오늘(일정이 있으면) 또는 이 달의 첫 일정 날짜를 기본 선택
+  if (!state.dayInit) {
+    const todayK = ymd(new Date());
+    const monthPrefix = yy + '-' + String(mm).padStart(2,'0');
+    let pick = '';
+    if (byDay[todayK]) pick = todayK;
+    else {
+      const keys = Object.keys(byDay).filter(k => k.indexOf(monthPrefix) === 0).sort();
+      if (keys.length) pick = keys[0];
+    }
+    if (pick) state.day = pick;
+    state.dayInit = true;
+  }
+
   const top = el('div','cal-top');
-  top.innerHTML = '<div class="cal-month num">'+yy+'년 '+mm+'월</div>'+
+  top.innerHTML = '<div class="cal-month num">' + yy + '년 ' + mm + '월</div>' +
     '<div class="cal-nav"><button id="calPrev" aria-label="이전 달">‹</button><button id="calNext" aria-label="다음 달">›</button></div>';
   area.appendChild(top);
 
   const cal = el('div','cal');
-  const dow = el('div','cal-dow', DOW.map(d=>'<div>'+d+'</div>').join(''));
-  cal.appendChild(dow);
+  cal.appendChild(el('div','cal-dow', DOW.map(d => '<div>' + d + '</div>').join('')));
   const grid = el('div','cal-grid');
   const startDow = new Date(yy, mm-1, 1).getDay();
   const daysInMonth = new Date(yy, mm, 0).getDate();
-  const byDay = {};
-  rows.forEach(r => { if (!r._d) return; const k = ymd(r._d); (byDay[k] = byDay[k] || []).push(r); });
   const prevMonthDays = new Date(yy, mm-1, 0).getDate();
-  for (let i=0;i<startDow;i++){ const c = el('div','cal-cell out'); c.appendChild(el('div','cal-day num', String(prevMonthDays-startDow+1+i))); grid.appendChild(c); }
+  for (let i = 0; i < startDow; i++) {
+    const c = el('div','cal-cell out');
+    c.appendChild(el('div','cal-day num', String(prevMonthDays - startDow + 1 + i)));
+    grid.appendChild(c);
+  }
   const today = ymd(new Date());
-  for (let d=1; d<=daysInMonth; d++){
-    const key = yy+'-'+String(mm).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const items = byDay[key] || [];
-    const cell = el('div','cal-cell' + (key===today?' today':''));
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = yy + '-' + String(mm).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const items = (byDay[key] || []).slice().sort((a,b)=> (a['회차']-b['회차']) || a._org.localeCompare(b._org,'ko'));
+    const cell = el('div','cal-cell' + (key === today ? ' today' : '') + (state.day === key ? ' sel' : ''));
     const dowIdx = new Date(yy, mm-1, d).getDay();
     if (dowIdx === 0) cell.classList.add('sun');
     if (dowIdx === 6) cell.classList.add('sat');
-    if (state.day === key) cell.classList.add('sel');
     cell.appendChild(el('div','cal-day num', String(d)));
+    const dupCount = items.filter(r => r._dups && r._dups.length).length;
     items.slice(0,3).forEach(r => {
       const dup = !!(r._dups && r._dups.length);
-      const b = el('button','ev s-' + (r['훈련내용']||'') + (dup ? ' is-dup' : ''), '<span class="ev-n">'+esc(r['회차'])+'</span><span class="ev-t">'+esc((r['강의과목']||'').slice(0,16))+'</span>');
-      b.title = (dup ? dupTitle(r) + ' · ' : '') + r['강의과목']+' · '+r['주강사'];
-      b.onclick = ev => { ev.stopPropagation(); state.day = key; renderView(); };
+      const b = el('button','ev s-' + (r['훈련내용']||'') + (dup ? ' is-dup' : ''),
+        '<span class="ev-n">' + esc(r['회차']) + '</span>' +
+        '<span class="ev-org">' + esc(orgShort(r._org)) + '</span>' +
+        '<span class="ev-t">' + esc((r['강의과목']||'').replace(/\s+/g,' ').slice(0,18)) + '</span>');
+      b.title = (dup ? '⚠ 일정 중복 · ' : '') + r._org + ' ' + r['회차'] + '회차 · ' + r['강의과목'] + ' · ' + (r['주강사']||'');
+      b.onclick = ev => { ev.stopPropagation(); state.day = key; state.dayInit = true; renderView(); };
+      b.setAttribute('aria-label', r._org + ' ' + r['회차'] + '회차 ' + r['강의과목']);
       cell.appendChild(b);
     });
-    if (items.length > 3) cell.appendChild(el('div','ev-more','+'+(items.length-3)));
+    if (items.length > 3) cell.appendChild(el('div','ev-more','+' + (items.length - 3)));
+    cell.setAttribute('role','button');
+    cell.setAttribute('tabindex','0');
+    cell.setAttribute('aria-label', (mm) + '월 ' + d + '일 ' + items.length + '건' + (dupCount ? ' (중복 ' + dupCount + ')' : ''));
     cell.onclick = () => {
       state.day = (state.day === key ? null : key);
+      state.dayInit = true;
       renderView();
       if (state.day) {
         const dd = document.querySelector('#dayDetail');
         if (dd) dd.scrollIntoView({ behavior:'smooth', block:'start' });
       }
     };
+    cell.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cell.click(); } };
     grid.appendChild(cell);
   }
   const tail = (7 - ((startDow + daysInMonth) % 7)) % 7;
-  for (let i=1;i<=tail;i++){ const c = el('div','cal-cell out'); c.appendChild(el('div','cal-day num', String(i))); grid.appendChild(c); }
+  for (let i = 1; i <= tail; i++) {
+    const c = el('div','cal-cell out');
+    c.appendChild(el('div','cal-day num', String(i)));
+    grid.appendChild(c);
+  }
   cal.appendChild(grid);
   area.appendChild(cal);
-  area.appendChild(el('div','cal-note','색상: <b>전문</b>=파랑 · <b>소양</b>=청록 · <b>취업</b>=주황. 날짜를 눌러 그날 일정을 확인하세요.'));
-  $('#calPrev').onclick = () => { let y=yy, m=mm-1; if(m<1){m=12;y--;} state.month = y+'-'+String(m).padStart(2,'0'); state.day=null; renderView(); };
-  $('#calNext').onclick = () => { let y=yy, m=mm+1; if(m>12){m=1;y++;} state.month = y+'-'+String(m).padStart(2,'0'); state.day=null; renderView(); };
+  area.appendChild(el('div','cal-note','색상: <b>전문</b>=파랑 · <b>소양</b>=청록 · <b>취업</b>=주황 · <b>⚠</b>=중복. 날짜를 누르면 그날 강의가 아래에 펼쳐집니다.'));
+  $('#calPrev').onclick = () => { let y = yy, m = mm-1; if (m < 1) { m = 12; y--; } state.month = y + '-' + String(m).padStart(2,'0'); state.day = null; state.dayInit = false; renderView(); };
+  $('#calNext').onclick = () => { let y = yy, m = mm+1; if (m > 12) { m = 1; y++; } state.month = y + '-' + String(m).padStart(2,'0'); state.day = null; state.dayInit = false; renderView(); };
 
   if (state.day) {
     const items = (byDay[state.day] || []).slice();
     const dObj = parseDate(state.day);
     const dd = el('div'); dd.id = 'dayDetail';
-    dd.innerHTML = '<div class="dd-head"><span>'+(dObj?(dObj.getMonth()+1)+'월 '+dObj.getDate()+'일 ('+DOW[dObj.getDay()]+')':state.day)+' · '+items.length+'건</span><button id="ddClose">닫기 ✕</button></div>';
+    const dupN = items.filter(r => r._dups && r._dups.length).length;
+    dd.innerHTML = '<div class="dd-head"><span>' + (dObj ? (dObj.getMonth()+1) + '월 ' + dObj.getDate() + '일 (' + DOW[dObj.getDay()] + ')' : state.day) + ' · ' + items.length + '건' +
+      (dupN ? ' <span class="dup-flag">⚠️ 중복 ' + dupN + '</span>' : '') + '</span><button id="ddClose">닫기 ✕</button></div>';
     const g = el('div','cards');
     items.forEach(r => g.appendChild(cardFor(r)));
-    dd.appendChild(g); area.appendChild(dd);
-    dd.querySelector('#ddClose').onclick = () => { state.day = null; renderView(); };
+    dd.appendChild(g);
+    area.appendChild(dd);
+    dd.querySelector('#ddClose').onclick = () => { state.day = null; state.dayInit = true; renderView(); };
   }
 }
 function renderTable(area, rows){
@@ -1162,6 +1212,7 @@ function wire(){
   $('#viewSeg').addEventListener('click', e => {
     const b = e.target.closest('button[data-view]');
     if (!b) return;
+    if (b.dataset.view === 'cal' && state.view !== 'cal') { state.day = null; state.dayInit = false; }
     state.view = b.dataset.view; renderView();
   });
   $('#resyncBtn').onclick = () => syncFromSheet();
