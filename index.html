@@ -1665,29 +1665,63 @@ function pdfBuildColumns(cells){
   });
   return cols;
 }
-function pdfLinesToRows(lines, cols){
-  const numCol = cols.find(c => c.key === '회차');
-  const dateCol = cols.find(c => c.key === '일자');
-  const nearest = x => {
+function pdfClusterCols(cells){
+  const pts = cells.slice().sort((a,b)=>a.x0-b.x0);
+  const cols = [];
+  pts.forEach(c => {
+    const hit = cols.find(k => Math.abs(k.x0 - c.x0) < 12);
+    if (hit) { hit.n++; hit.x0 = (hit.x0*(hit.n-1) + c.x0)/hit.n; hit.x1 = Math.max(hit.x1, c.x1); }
+    else cols.push({ x0: c.x0, x1: c.x1, n: 1 });
+  });
+  cols.sort((a,b)=>a.x0-b.x0);
+  cols.forEach((c,i)=>c.idx = i);
+  return cols;
+}
+function pdfMapKeys(headerCols, dataCols){
+  const map = {};
+  if (headerCols.length === dataCols.length) {
+    headerCols.forEach((h,i) => { if (h.key) map[h.key] = dataCols[i].idx; });
+    return map;
+  }
+  headerCols.forEach(h => {
+    if (!h.key) return;
     let best = -1, bd = 1e9;
-    cols.forEach(c => { const d = Math.abs(c.mid - x); if (d < bd){ bd = d; best = c.idx; } });
-    return bd <= 48 ? best : -1;
+    const hm = (h.x0 + h.x1)/2;
+    dataCols.forEach(c => { const d = Math.abs((c.x0 + c.x1)/2 - hm); if (d < bd){ bd = d; best = c.idx; } });
+    if (best >= 0) map[h.key] = best;
+  });
+  return map;
+}
+function pdfRowsFromLines(lines, dataCols, map){
+  const colOf = x => {
+    let best = -1, bd = 1e9;
+    dataCols.forEach(c => { const d = Math.abs(c.x0 - x); if (d < bd){ bd = d; best = c.idx; } });
+    return bd <= 40 ? best : -1;
   };
+  const numIdx = map['회차'], dateIdx = map['일자'];
   const rows = [];
+  const pending = [];
+  const put = (row, c) => {
+    const idx = colOf(c.x0);
+    if (idx < 0) return;
+    row[idx] = row[idx] ? row[idx] + ' ' + c.s : c.s;
+  };
   lines.forEach(l => {
     if (!l.cells.length) return;
-    const at = idx => { const c = l.cells.find(cc => nearest((cc.x0+cc.x1)/2) === idx); return c ? c.s : ''; };
-    const rowNum = numCol ? at(numCol.idx).replace(/\s/g,'') : '';
-    const dateTxt = dateCol ? at(dateCol.idx) : '';
-    const starts = /^\d{1,2}$/.test(rowNum) || (dateCol && /\d{1,2}\s*\/\s*\d{1,2}/.test(dateTxt.replace(/\s/g,'')));
-    if (starts) rows.push(new Array(cols.length).fill(''));
+    const at = idx => { const c = l.cells.find(cc => colOf(cc.x0) === idx); return c ? c.s : ''; };
+    const rowNum = numIdx != null ? at(numIdx).replace(/\s/g,'') : '';
+    const dateTxt = dateIdx != null ? at(dateIdx).replace(/\s/g,'') : '';
+    const starts = /^\d{1,2}$/.test(rowNum) || /\d{1,2}\/\d{1,2}/.test(dateTxt);
+    if (!rows.length && !starts) { l.cells.forEach(c => pending.push(c)); return; }
+    if (starts) {
+      rows.push(new Array(dataCols.length).fill(''));
+      const row0 = rows[rows.length-1];
+      pending.forEach(c => put(row0, c));
+      pending.length = 0;
+    }
     if (!rows.length) return;
     const row = rows[rows.length-1];
-    l.cells.forEach(c => {
-      const idx = nearest((c.x0 + c.x1)/2);
-      if (idx < 0) return;
-      row[idx] = row[idx] ? row[idx] + ' ' + c.s : c.s;
-    });
+    l.cells.forEach(c => put(row, c));
   });
   return rows;
 }
@@ -1699,8 +1733,8 @@ async function parsePdfFile(file){
   const data = new Uint8Array(await file.arrayBuffer());
   const pdf = await lib.getDocument({ data }).promise;
   const pageCount = Math.min(pdf.numPages, 20);
-  let colDefs = null, itemCount = 0;
-  const cellRows = [];
+  let headerCols = null, itemCount = 0;
+  const bodyLines = [], bodyCells = [];
   for (let p = 1; p <= pageCount; p++){
     const page = await pdf.getPage(p);
     const tc = await page.getTextContent();
@@ -1714,7 +1748,8 @@ async function parsePdfFile(file){
     itemCount += items.length;
     if (!items.length) continue;
     const lines = pdfGroupLines(items);
-    const hdrCells = []; let lastHeader = -1; let seenData = false;
+    let lastHeader = -1, seenData = false;
+    const hdrCells = [];
     lines.forEach((l, i) => {
       if (i > 12 || seenData) return;
       const txt = l.cells.map(c => c.s).join('').replace(/\s+/g,'');
@@ -1723,55 +1758,25 @@ async function parsePdfFile(file){
       if (hits >= 2) {
         lastHeader = Math.max(lastHeader, i);
         l.cells.forEach(c => hdrCells.push(c));
+        l.cells.forEach(c => bodyCells.push(c));
       }
     });
-    if (!colDefs && hdrCells.length >= 3) colDefs = pdfBuildColumns(hdrCells);
-    if (!colDefs) continue;
-    pdfLinesToRows(lines.slice(lastHeader + 1), colDefs)
-      .filter(r => r.some(v => v && v.trim()))
-      .forEach(r => cellRows.push(r));
+    if (!headerCols && hdrCells.length >= 3) headerCols = pdfBuildColumns(hdrCells);
+    lines.slice(lastHeader + 1).forEach(l => { if (l.cells.length) { bodyLines.push(l); l.cells.forEach(c => bodyCells.push(c)); } });
   }
   if (itemCount < 20) throw new Error('이 PDF에는 텍스트가 거의 없습니다(스캔 이미지 PDF). 표를 읽을 수 없으니 HWPX 원본이나 텍스트 PDF로 올려 주세요.');
-  if (!colDefs) throw new Error('표의 머리글(회차·강의과목)을 찾지 못했습니다. 표가 들어 있는 PDF인지 확인해 주세요.');
+  if (!headerCols) throw new Error('표의 머리글(회차·강의과목)을 찾지 못했습니다. 표가 들어 있는 PDF인지 확인해 주세요.');
+  const dataCols = pdfClusterCols(bodyCells);
+  if (dataCols.length < 4) throw new Error('표의 열 구조를 읽지 못했습니다. 이 PDF는 표가 아닌 이미지 형태일 수 있습니다.');
+  const map = pdfMapKeys(headerCols, dataCols);
+  const needed = ['회차','일자','과목','이론','실습','강사'];
+  if (needed.some(k => map[k] == null)) {
+    // 머리글과 본문 열 수가 맞지 않는 경우(병합 머리글 등): 위치 기준 매핑으로 보완
+    headerCols.forEach(h => { if (h.key && map[h.key] == null) map[h.key] = Math.min(dataCols.length-1, h.idx); });
+  }
+  const cellRows = pdfRowsFromLines(bodyLines, dataCols, map).filter(r => r.some(v => v && v.trim()));
   if (!cellRows.length) throw new Error('표의 데이터 행을 읽지 못했습니다. PDF 안의 표가 일반 텍스트로 저장되어 있는지 확인해 주세요.');
-  const remap = {};
-  PDF_HDR.forEach(([key]) => {
-    const hit = colDefs.find(c => c.key === key);
-    if (hit) remap[key] = hit.idx;
-  });
-  const need = ['회차','일자','과목','이론','실습','강사'].every(k => remap[k] != null);
-  return need ? rowsToScheduleWith(cellRows, remap) : rowsToSchedule(cellRows, { year: num($('#upYear').value) || 2027 });
-}
-
-function rowsToScheduleWith(cellRows, map){
-  const year = num($('#upYear').value) || 2027;
-  const out = [];
-  const get = (cells, k) => (map[k] != null ? String(cells[map[k]] == null ? '' : cells[map[k]]) : '');
-  cellRows.forEach(cells => {
-    const joined = cells.join(' ').replace(/\s+/g,'');
-    if (/^(합계|총계|소계)/.test(joined)) return;
-    if (isHeaderRow(cells)) return;
-    const subject = get(cells,'과목').replace(/\s+/g,' ').trim();
-    const dateRaw = get(cells,'일자');
-    if (!subject && !dateRaw) return;
-    const d = dateText(dateRaw, year);
-    const teacher = parseTeachers(get(cells,'강사'));
-    const mark = k => isMark(get(cells,k));
-    const type = mark('전문') ? '전문' : mark('소양') ? '소양' : mark('취업') ? '취업' : '';
-    const mode = mark('온라인') ? '온라인' : mark('오프라인') ? '오프라인' : '';
-    out.push({
-      '회차': num(get(cells,'회차')) || (out.length+1),
-      '일자': d ? ymd(d) : dateRaw,
-      '요일': d ? DOW[d.getDay()] : '',
-      '강의과목': subject,
-      '이론': num(get(cells,'이론')), '실습': num(get(cells,'실습')),
-      '현장실습': num(get(cells,'현장실습')), '현장견학': num(get(cells,'현장견학')),
-      '주강사': teacher.main, '주강사소속': teacher.mainOrg,
-      '보조강사': teacher.sub, '보조강사소속': teacher.subOrg,
-      '훈련내용': type, '온오프라인': mode, '상태': '예정'
-    });
-  });
-  return out;
+  return rowsToScheduleWith(cellRows, map);
 }
 
 /* =========================================================================
