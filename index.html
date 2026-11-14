@@ -819,22 +819,32 @@ function computeDups(){
       map.get(k).rows.push(r);
     });
   });
-  ROWS.forEach(r => { r._dups = []; });
+  ROWS.forEach(r => { r._dups = []; r._dupNames = []; });
   const groups = Array.from(map.values()).filter(g => g.rows.length > 1);
   groups.sort((a,b)=> a.day.localeCompare(b.day) || a.name.localeCompare(b.name,'ko'));
   const affected = [];
   groups.forEach(g => {
     g.rows.forEach(r => {
       if (affected.indexOf(r) < 0) affected.push(r);
+      if (r._dupNames.indexOf(g.name) < 0) r._dupNames.push(g.name);
       g.rows.forEach(o => { if (o !== r && r._dups.indexOf(o) < 0) r._dups.push(o); });
     });
   });
   DUPS = { groups, rowCount: affected.length };
   return DUPS;
 }
+function dupNames(r){
+  return (r && r._dupNames && r._dupNames.length) ? r._dupNames : [];
+}
+function dupLabel(r){
+  const n = dupNames(r);
+  if (!n.length) return '일정 중복';
+  return n.slice(0,2).join('·') + ' 중복';
+}
 function dupTitle(r){
   if (!r._dups || !r._dups.length) return '';
-  return '일정 중복 · ' + r._dups.map(o => o._org + ' ' + o['회차'] + '회차 ' + (o['강의과목']||'')).join(' / ');
+  const n = dupNames(r).join('·');
+  return (n ? n + ' 중복 — ' : '일정 중복 · ') + r._dups.map(o => o._org + ' ' + o['회차'] + '회차 ' + (o['강의과목']||'')).join(' / ');
 }
 function dupDayLabel(g){
   const d = g.date;
@@ -858,7 +868,7 @@ function renderDupBanner(){
       '<div class="txt">' +
         '<b>강사 일정 중복 ' + n + '건 감지</b>' +
         '<p>같은 날짜에 같은 강사가 두 건 이상 배정되어 있습니다. 겹치는 기관·회차를 확인해 주세요.' +
-          (first ? ' 예: ' + esc(dupDayLabel(first)) + '(' + esc(orgs) + ')' : '') +
+          (first ? ' 예: ' + esc(dupDayLabel(first)) + ' ' + esc(first.name) + ' 중복(' + esc(orgs) + ')' : '') +
         '</p>' +
         '<div class="dup-list">' +
           DUPS.groups.slice(0,6).map((g,i) =>
@@ -986,7 +996,7 @@ function cardFor(r){
       '<span class="pill sec num">'+esc(r['회차'])+'회차</span>'+
       (r['훈련내용'] ? '<span class="pill type '+esc(r['훈련내용'])+'">'+esc(r['훈련내용'])+'</span>' : '')+
       (r._uploaded ? '<span class="pill sec">업로드</span>' : '')+
-      (dup ? '<span class="dup-flag" title="'+esc(dupTitle(r))+'">⚠️ 일정 중복</span>' : '')+
+      (dup ? '<span class="dup-flag" title="'+esc(dupTitle(r))+'">⚠️ '+esc(dupLabel(r))+'</span>' : '')+
     '</div>'+
     '<h3 class="c-title">'+esc(r['강의과목'])+'</h3>'+
     '<div class="c-meta">'+
@@ -1095,11 +1105,11 @@ function renderCalendar(area, rows){
     items.slice(0,3).forEach(r => {
       const dup = !!(r._dups && r._dups.length);
       const b = el('button','ev s-' + (r['훈련내용']||'') + (dup ? ' is-dup' : ''),
-        (dup ? '<span class="ev-warn" aria-hidden="true">⚠</span>' : '') +
+        (dup ? '<span class="ev-warn" aria-hidden="true">⚠' + esc(dupNames(r).slice(0,1).join('')) + '</span>' : '') +
         '<span class="ev-n">' + esc(r['회차']) + '</span>' +
         '<span class="ev-org">' + esc(orgShort(r._org)) + '</span>' +
         '<span class="ev-t">' + esc((r['강의과목']||'').replace(/\s+/g,' ').slice(0,18)) + '</span>');
-      b.title = (dup ? '⚠ 일정 중복 · ' : '') + r._org + ' ' + r['회차'] + '회차 · ' + r['강의과목'] + ' · ' + (r['주강사']||'');
+      b.title = (dup ? dupTitle(r) + ' · ' : '') + r._org + ' ' + r['회차'] + '회차 · ' + r['강의과목'] + ' · ' + (r['주강사']||'');
       b.onclick = ev => { ev.stopPropagation(); state.day = key; state.dayInit = true; renderView(); };
       b.setAttribute('aria-label', r._org + ' ' + r['회차'] + '회차 ' + r['강의과목']);
       cell.appendChild(b);
@@ -1138,7 +1148,7 @@ function renderCalendar(area, rows){
     const dd = el('div'); dd.id = 'dayDetail';
     const dupN = items.filter(r => r._dups && r._dups.length).length;
     dd.innerHTML = '<div class="dd-head"><span>' + (dObj ? (dObj.getMonth()+1) + '월 ' + dObj.getDate() + '일 (' + DOW[dObj.getDay()] + ')' : state.day) + ' · ' + items.length + '건' +
-      (dupN ? ' <span class="dup-flag">⚠️ 중복 ' + dupN + '</span>' : '') + '</span><button id="ddClose">닫기 ✕</button></div>';
+      (dupN ? ' <span class="dup-flag">⚠️ ' + esc(Array.from(new Set([].concat.apply([], items.filter(r=>r._dups&&r._dups.length).map(r=>dupNames(r))))).join('·')) + ' 중복 ' + dupN + '</span>' : '') + '</span><button id="ddClose">닫기 ✕</button></div>';
     const g = el('div','cards');
     items.forEach(r => g.appendChild(cardFor(r)));
     dd.appendChild(g);
@@ -1163,7 +1173,7 @@ function renderTable(area, rows){
     const dTxt = r._d ? (r._d.getMonth()+1)+'.'+r._d.getDate()+'('+(r['요일']||DOW[r._d.getDay()])+')' : r['일자'];
     tr.innerHTML =
       '<td class="num">'+esc(r['회차'])+'</td>'+
-      '<td class="num" style="white-space:nowrap">'+esc(dTxt)+(dup?' <span class="dup-flag" title="'+esc(dupTitle(r))+'">⚠️</span>':'')+'</td>'+
+      '<td class="num" style="white-space:nowrap">'+esc(dTxt)+(dup?' <span class="dup-flag" title="'+esc(dupTitle(r))+'">⚠️ '+esc(dupNames(r).join('·'))+'</span>':'')+'</td>'+
       '<td style="white-space:nowrap">'+esc(r._org)+'</td>'+
       '<td class="tl">'+esc(r['강의과목'])+'</td>'+
       '<td class="num">'+(r['이론']||'·')+'</td>'+
