@@ -301,11 +301,15 @@
     .cal-day{font-size:11.5px;margin:0 0 3px 1px}
     .cal-dow div{font-size:11px;padding:7px 0}
     .ev{
-      width:8px;height:8px;padding:0;margin:0 2px 2px 0;border-radius:50%;
+      width:9px;height:9px;padding:0;margin:0 2px 2px 0;border-radius:50%;
       display:inline-block;text-indent:-9999px;overflow:hidden;
+      background:var(--brand);box-shadow:0 0 0 1px rgba(47,79,224,.25);
     }
+    .ev.s-소양{background:#0f9e95;box-shadow:0 0 0 1px rgba(15,158,149,.25)}
+    .ev.s-취업{background:#e19a00;box-shadow:0 0 0 1px rgba(225,154,0,.3)}
+    .ev.is-dup{background:#c2410c;box-shadow:0 0 0 1.5px #7a4b00}
     .ev .ev-n{display:none}
-    .ev-more{display:inline;font-size:10.5px;padding-left:0}
+    .ev-more{display:inline;font-size:10.5px;padding-left:0;color:var(--ink-3)}
   }
   .ev.s-소양{background:var(--teal-soft);color:#0b635c}
   .ev.s-취업{background:var(--amber-soft);color:#8a5200}
