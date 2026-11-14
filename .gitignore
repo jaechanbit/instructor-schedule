@@ -1,2 +1,5 @@
 .tmp/
 backup/
+data.json
+sheet-values.json
+preview/
