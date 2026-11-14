@@ -203,7 +203,8 @@
     border:1px solid #e8b955;border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:800;
   }
   .card.is-dup{box-shadow:inset 0 0 0 2px #e8b955, 0 1px 2px rgba(16,24,40,.05)}
-  .ev.is-dup{background:#fff3d6;color:#7a4b00;box-shadow:inset 0 0 0 1.5px #e0b04a}
+  .ev.is-dup{box-shadow:inset 0 0 0 1.5px #d97706;font-weight:800}
+  .ev .ev-warn{flex:0 0 auto;font-size:10px;line-height:1;color:#b45309}
   tbody tr.is-dup td{background:#fffaee}
   tbody tr.is-dup:hover td{background:#fff5dd}
 
@@ -316,6 +317,8 @@
     .ev-org{font-size:8.5px;background:transparent;padding:0;color:inherit;opacity:.85;letter-spacing:-.04em}
     .ev-t{display:none}
     .ev-more{display:block;font-size:10px;padding:0;margin-top:1px;color:var(--ink-3);text-align:center}
+    .ev.is-dup{background:#c2410c;color:#fff;box-shadow:none}
+    .ev.is-dup .ev-warn{color:#ffe6d5}
     #dayDetail .dd-head{font-size:14px}
   }
   .ev.s-소양{background:var(--teal-soft);color:#0b635c}
@@ -1092,6 +1095,7 @@ function renderCalendar(area, rows){
     items.slice(0,3).forEach(r => {
       const dup = !!(r._dups && r._dups.length);
       const b = el('button','ev s-' + (r['훈련내용']||'') + (dup ? ' is-dup' : ''),
+        (dup ? '<span class="ev-warn" aria-hidden="true">⚠</span>' : '') +
         '<span class="ev-n">' + esc(r['회차']) + '</span>' +
         '<span class="ev-org">' + esc(orgShort(r._org)) + '</span>' +
         '<span class="ev-t">' + esc((r['강의과목']||'').replace(/\s+/g,' ').slice(0,18)) + '</span>');
