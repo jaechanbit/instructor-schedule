@@ -110,6 +110,7 @@
   }
   .upload-btn span{font-size:11.5px;font-weight:700;color:#cfd9ff;border-left:1px solid rgba(255,255,255,.3);padding-left:8px}
   .stats{display:flex;gap:var(--s2);margin-top:var(--s3);flex-wrap:wrap}
+  .stat-line{display:none}
   .stat{
     flex:1 1 96px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);
     border-radius:14px;padding:10px 13px;
@@ -183,6 +184,12 @@
   .dup-banner .txt{flex:1 1 auto;min-width:0}
   .dup-banner b{color:#7a4b00;font-size:15px;letter-spacing:-.01em}
   .dup-banner p{margin:4px 0 0;font-size:13.5px;color:#6b4a12;line-height:1.55}
+  .dup-toggle{
+    border:0;background:transparent;color:#7a4b00;font-size:13px;font-weight:800;
+    padding:4px 6px;margin-left:2px;text-decoration:underline;text-underline-offset:2px;
+  }
+  .dup-detail{display:none}
+  .dup-banner.open .dup-detail{display:block}
   .dup-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
   .dup-chip{
     border:1px solid #e0b04a;background:#fff;color:#7a4b00;border-radius:999px;
@@ -427,6 +434,46 @@
     background:#0e1531;color:#dbe3ff;border-radius:12px;padding:13px;font-size:11.5px;line-height:1.6;
     overflow:auto;max-height:240px;margin:8px 0 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   }
+  /* ── 모바일 슬림 레이아웃 ─────────────────── */
+  @media(max-width:640px){
+    header.top{padding:calc(14px + env(safe-area-inset-top)) 0 14px;border-radius:0 0 18px 18px}
+    h1#pageTitle{font-size:20px;margin-bottom:0}
+    .subtitle{display:none}
+    .top-row{gap:6px;margin-top:10px}
+    .badge-sync{min-height:32px;font-size:12px;padding:5px 10px}
+    .badge-sync .led{width:7px;height:7px}
+    .icon-btn{width:32px;height:32px;font-size:14px}
+    a.sheet-link{min-height:32px;font-size:12.5px;padding:0 11px;font-weight:700}
+    .upload-btn{min-height:32px;font-size:12.5px;padding:0 11px;flex:1 1 auto;justify-content:center}
+    .upload-btn span{display:none}
+    .stats{display:none}
+    .stat-line{
+      display:block;margin-top:10px;font-size:12.5px;color:#c8d2ee;font-weight:700;
+      background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+      border-radius:10px;padding:7px 11px;
+    }
+    .stat-line b{color:#ffd98a}
+    .panel{padding:12px;margin-top:12px;border-radius:14px}
+    .tabs{gap:6px;padding-bottom:2px}
+    .tab{min-height:40px;padding:0 13px;font-size:13.5px}
+    .row2{gap:8px;margin-top:10px}
+    .search{flex:1 1 100%;min-width:0}
+    .search input{min-height:42px;font-size:14.5px}
+    select.teach{flex:1 1 calc(58% - 4px);min-width:0;min-height:42px;font-size:14.5px}
+    .seg{flex:1 1 calc(42% - 4px);min-height:42px}
+    .seg button{min-height:36px;padding:0 9px;font-size:13px}
+    .dup-chip{flex:1 1 100%;justify-content:center;min-height:38px}
+    .dup-banner{padding:10px 12px;gap:8px;flex-wrap:wrap}
+    .dup-banner b{font-size:14px}
+    .dup-actions{margin-left:0;width:100%}
+    .dup-actions .btn{width:100%}
+    .sec-title{margin:16px 2px 8px}
+    .sec-title h2{font-size:15px}
+    .card{padding:12px 13px 12px 15px;border-radius:13px}
+    .c-title{font-size:15px}
+    .c-meta{font-size:13px}
+    .sum-card{padding:16px}
+  }
   .toast{
     position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
     background:#111a36;color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;
@@ -600,7 +647,7 @@ let BASE = [];        // 시트(또는 내장) 데이터
 let EXTRA = [];       // 업로드로 추가된 데이터
 let ROWS = [];        // 화면에 쓰는 최종 목록
 let SOURCE = 'embedded';
-let state = { org:'전체', teacher:'', q:'', view:'card', month:null, day:null, dayInit:false, dupOnly:false };
+let state = { org:'전체', teacher:'', q:'', view:'card', month:null, day:null, dayInit:false, dupOnly:false, dupOpen: (typeof window !== 'undefined' && window.innerWidth > 640) };
 let DUPS = { groups: [], rowCount: 0 };
 
 /* =========================================================================
@@ -862,20 +909,24 @@ function renderDupBanner(){
   const first = DUPS.groups[0];
   const orgs = first ? Array.from(new Set(first.rows.map(r=>r._org))).join('·') : '';
   box.hidden = false;
+  const open = !!state.dupOpen;
   box.innerHTML =
-    '<div class="dup-banner" role="alert">' +
+    '<div class="dup-banner' + (open ? ' open' : '') + '" role="alert">' +
       '<div class="ic" aria-hidden="true">⚠️</div>' +
       '<div class="txt">' +
-        '<b>강사 일정 중복 ' + n + '건 감지</b>' +
-        '<p>같은 날짜에 같은 강사가 두 건 이상 배정되어 있습니다. 겹치는 기관·회차를 확인해 주세요.' +
-          (first ? ' 예: ' + esc(dupDayLabel(first)) + ' ' + esc(first.name) + ' 중복(' + esc(orgs) + ')' : '') +
-        '</p>' +
-        '<div class="dup-list">' +
-          DUPS.groups.slice(0,6).map((g,i) =>
-            '<button class="dup-chip" data-g="' + i + '" title="' + esc(g.rows.map(r=>r._org+' '+r['회차']+'회차 '+r['강의과목']).join(' / ')) + '">' +
-              esc(dupDayLabel(g)) + ' · ' + esc(Array.from(new Set(g.rows.map(r=>r._org))).join('·')) +
-            '</button>'
-          ).join('') +
+        '<b>강사 일정 중복 ' + n + '건' + (first ? ' — ' + esc(first.name) + ' 등' : '') + '</b>' +
+        '<button class="dup-toggle" id="dupToggle" aria-expanded="' + (open ? 'true' : 'false') + '">' + (open ? '접기 ▲' : '자세히 보기 ▼') + '</button>' +
+        '<div class="dup-detail">' +
+          '<p>같은 날짜에 같은 강사가 두 건 이상 배정되어 있습니다. 겹치는 기관·회차를 확인해 주세요.' +
+            (first ? ' 예: ' + esc(dupDayLabel(first)) + ' ' + esc(first.name) + ' 중복(' + esc(orgs) + ')' : '') +
+          '</p>' +
+          '<div class="dup-list">' +
+            DUPS.groups.slice(0,8).map((g,i) =>
+              '<button class="dup-chip" data-g="' + i + '" title="' + esc(g.rows.map(r=>r._org+' '+r['회차']+'회차 '+r['강의과목']).join(' / ')) + '">' +
+                esc(dupDayLabel(g)) + ' · ' + esc(Array.from(new Set(g.rows.map(r=>r._org))).join('·')) +
+              '</button>'
+            ).join('') +
+          '</div>' +
         '</div>' +
       '</div>' +
       '<div class="dup-actions">' +
@@ -898,6 +949,8 @@ function renderDupBanner(){
   });
   const ob = box.querySelector('#dupOnlyBtn');
   if (ob) ob.onclick = () => toggleDupOnly();
+  const tg = box.querySelector('#dupToggle');
+  if (tg) tg.onclick = () => { state.dupOpen = !state.dupOpen; renderDupBanner(); };
 }
 function toggleDupOnly(){
   state.dupOnly = !state.dupOnly;
@@ -928,11 +981,14 @@ function renderStats(){
   const hours = ROWS.reduce((s,r)=>s+r._sum,0);
   const teachers = teacherList().all.length;
   const orgs = orgList().length;
+  const dupN = DUPS.rowCount || 0;
   $('#stats').innerHTML =
     '<div class="stat"><b class="num">'+total+'</b><span>전체 회차</span></div>'+
     '<div class="stat"><b class="num">'+hours+'</b><span>총 시간</span></div>'+
     '<div class="stat"><b class="num">'+orgs+'</b><span>기관</span></div>'+
-    '<div class="stat"><b class="num">'+teachers+'</b><span>강사</span></div>';
+    '<div class="stat"><b class="num">'+teachers+'</b><span>강사</span></div>'+
+    '<div class="stat-line num">전체 '+total+'회차 · '+hours+'시간 · 기관 '+orgs+' · 강사 '+teachers+'명'+
+      (dupN ? ' · <b>중복 '+dupN+'</b>' : '')+'</div>';
 }
 function renderTabs(){
   const box = $('#orgTabs'); box.innerHTML = '';
