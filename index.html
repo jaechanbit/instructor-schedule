@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>라온컨설팅 · 강사별 강의일정 관리</title>
+<meta name="description" content="기관·강사별 강의 일정 통합 관리 — 전북새일 35회차, 총 140시간. 구글 시트와 실시간 연동.">
+
+<!-- 오픈그래프 / 카카오톡 썸네일 -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="라온컨설팅 · 강사별 강의일정 관리">
+<meta property="og:description" content="기관·강사별 강의 일정을 한눈에 — 전북새일 35회차 · 총 140시간">
+<meta property="og:image" content="https://jaechanbit.github.io/instructor-schedule/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://jaechanbit.github.io/instructor-schedule/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="라온컨설팅 · 강사별 강의일정 관리">
+<meta name="twitter:description" content="기관·강사별 강의 일정을 한눈에 — 전북새일 35회차 · 총 140시간">
+<meta name="twitter:image" content="https://jaechanbit.github.io/instructor-schedule/og-image.png">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23131a3a'/%3E%3Crect x='18' y='26' width='64' height='56' rx='10' fill='%23ffffff'/%3E%3Crect x='18' y='26' width='64' height='16' rx='8' fill='%234f6ef7'/%3E%3Ccircle cx='38' cy='58' r='7' fill='%2314b8a6'/%3E%3Ccircle cx='62' cy='58' r='7' fill='%23f59e0b'/%3E%3C/svg%3E">
+
+<style>
+  :root{
+    --ink:#0f172a;
+    --ink-2:#475569;
+    --ink-3:#8a94a6;
+    --line:#e4e8f0;
+    --bg:#f4f6fb;
+    --card:#ffffff;
+    --brand:#3b5bfd;
+    --brand-soft:#eef1ff;
+    --teal:#0ea5a3;
+    --amber:#e08a00;
+    --violet:#7c5cff;
+    --navy:#131a3a;
+    --radius:16px;
+    --shadow:0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic","Noto Sans KR",Roboto,sans-serif;
+    font-size:15px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 14px 48px}
+  button{font-family:inherit;font-size:inherit;cursor:pointer}
+
+  /* ── header ── */
+  header.top{
+    background:
+      radial-gradient(120% 140% at 88% -20%, rgba(124,92,255,.55) 0%, rgba(124,92,255,0) 55%),
+      radial-gradient(90% 120% at 0% 0%, rgba(20,184,166,.35) 0%, rgba(20,184,166,0) 60%),
+      linear-gradient(160deg,#101736 0%, #1b2350 55%, #131a3a 100%);
+    color:#fff;
+    padding:calc(18px + env(safe-area-inset-top)) 0 22px;
+    border-radius:0 0 26px 26px;
+    box-shadow:0 10px 30px rgba(19,26,58,.18);
+  }
+  header.top .inner{max-width:1080px;margin:0 auto;padding:0 14px}
+  .brand{
+    display:flex;align-items:center;gap:7px;
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:#a9b4d8;font-weight:700;
+  }
+  .brand .dot{width:6px;height:6px;border-radius:50%;background:#14e0b0;box-shadow:0 0 10px #14e0b0}
+  h1#pageTitle{
+    font-size:clamp(20px,5.6vw,28px);line-height:1.28;margin:8px 0 4px;
+    font-weight:800;letter-spacing:-.02em;
+  }
+  .subtitle{margin:0;color:#b9c3e0;font-size:13px}
+  .top-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+  .badge-sync{
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);
+    color:#dbe3ff;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:600;
+    white-space:nowrap;
+  }
+  .badge-sync .led{width:7px;height:7px;border-radius:50%;background:#8b95b6}
+  .badge-sync.live .led{background:#2ee6a8;box-shadow:0 0 8px #2ee6a8}
+  .badge-sync.local .led{background:#ffc45c;box-shadow:0 0 8px #ffc45c}
+  .badge-sync.loading .led{animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:30px;height:30px;border-radius:50%;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#cfd8f5;
+  }
+  .icon-btn:active{transform:scale(.94)}
+  a.sheet-link{
+    display:inline-flex;align-items:center;gap:6px;text-decoration:none;
+    background:#fff;color:#131a3a;border-radius:999px;padding:8px 14px;
+    font-size:13px;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,.18);
+  }
+  .stats{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+  .stat{
+    flex:1 1 92px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+    border-radius:14px;padding:9px 12px;
+  }
+  .stat b{display:block;font-size:18px;letter-spacing:-.02em}
+  .stat span{font-size:11.5px;color:#a9b4d8;font-weight:600}
+
+  /* ── controls ── */
+  .panel{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:12px;margin-top:14px;
+  }
+  .tabs{display:flex;gap:7px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--ink-2);
+    border-radius:999px;padding:8px 14px;font-size:13.5px;font-weight:700;white-space:nowrap;
+    transition:.15s;
+  }
+  .tab .cnt{color:var(--ink-3);font-weight:700;margin-left:4px;font-size:12px}
+  .tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .tab.on .cnt{color:#9fb0e8}
+
+  .row2{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+  .search{position:relative;flex:1 1 190px;min-width:170px}
+  .search input{
+    width:100%;border:1px solid var(--line);background:#fafbfe;border-radius:12px;
+    padding:11px 34px 11px 36px;font-size:14px;color:var(--ink);outline:none;
+    font-family:inherit;
+  }
+  .search input:focus{border-color:#b9c5ff;background:#fff;box-shadow:0 0 0 3px rgba(59,91,253,.1)}
+  .search .mag{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:14px}
+  .search .clr{
+    position:absolute;right:6px;top:50%;transform:translateY(-50%);
+    border:0;background:transparent;color:var(--ink-3);font-size:16px;padding:4px 6px;display:none;
+  }
+  .search.has .clr{display:block}
+  select.teach{
+    flex:1 1 150px;border:1px solid var(--line);background:#fafbfe;border-radius:12px;
+    padding:11px 34px 11px 12px;font-size:14px;font-family:inherit;color:var(--ink);
+    appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a94a6' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 13px center;
+  }
+  .seg{display:flex;background:#f1f3f9;border-radius:12px;padding:3px;gap:2px;flex:0 0 auto}
+  .seg button{
+    border:0;background:transparent;color:var(--ink-2);border-radius:9px;
+    padding:8px 11px;font-size:12.5px;font-weight:700;white-space:nowrap;
+  }
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(16,24,40,.12)}
+
+  /* ── teacher summary ── */
+  #summary{margin-top:12px;display:none}
+  #summary.show{display:block}
+  .sum-card{
+    background:linear-gradient(150deg,#1b2350,#26306b 60%,#1b2350);
+    color:#fff;border-radius:18px;padding:16px;box-shadow:0 12px 26px rgba(27,35,80,.22);
+  }
+  .sum-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .avatar{
+    width:42px;height:42px;border-radius:50%;display:grid;place-items:center;
+    background:rgba(255,255,255,.14);font-weight:800;font-size:16px;border:1px solid rgba(255,255,255,.18);
+  }
+  .sum-name{font-size:17px;font-weight:800}
+  .sum-role{font-size:12px;color:#b9c3e0;font-weight:600}
+  .sum-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:13px}
+  @media(min-width:620px){.sum-grid{grid-template-columns:repeat(4,1fr)}}
+  .sum-box{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px 11px}
+  .sum-box b{display:block;font-size:17px;letter-spacing:-.02em}
+  .sum-box span{font-size:11.5px;color:#a9b4d8;font-weight:600}
+  .sum-orgs{margin-top:11px;font-size:12.5px;color:#cfd8f5;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .org-chip{background:rgba(255,255,255,.12);border-radius:999px;padding:3px 9px;font-weight:700;color:#fff}
+
+  /* ── list ── */
+  .sec-title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:18px 2px 8px}
+  .sec-title h2{font-size:15px;margin:0;font-weight:800;letter-spacing:-.01em}
+  .sec-title .hint{font-size:12px;color:var(--ink-3);font-weight:600}
+
+  .cards{display:grid;gap:9px}
+  @media(min-width:700px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 13px;
+    box-shadow:0 1px 2px rgba(16,24,40,.04);position:relative;overflow:hidden;
+  }
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand)}
+  .card.t-소양::before{background:var(--teal)}
+  .card.t-취업::before{background:var(--amber)}
+  .card.t-전문::before{background:var(--brand)}
+  .card .c-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:5px}
+  .pill{border-radius:999px;padding:2.5px 8px;font-size:11px;font-weight:800;letter-spacing:.01em}
+  .pill.date{background:var(--brand-soft);color:#3b4dc4}
+  .pill.sec{background:#f1f3f9;color:#5a6478}
+  .pill.type{background:#fff4e0;color:#a86400}
+  .pill.type.전문{background:var(--brand-soft);color:#3b4dc4}
+  .pill.type.소양{background:#e5f8f6;color:#0a7c79}
+  .pill.type.취업{background:#fff4e0;color:#a86400}
+  .pill.status{background:#eefaf2;color:#1a7a4a}
+  .c-title{font-size:14.5px;font-weight:700;line-height:1.42;letter-spacing:-.01em;margin:0 0 7px}
+  .c-meta{display:flex;flex-wrap:wrap;gap:5px 12px;font-size:12.5px;color:var(--ink-2)}
+  .c-meta b{color:var(--ink);font-weight:700}
+  .c-hours{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .hchip{background:#f6f8fd;border:1px solid #e8ecf7;border-radius:8px;padding:3px 8px;font-size:11.5px;color:#43507a;font-weight:700}
+  .hchip b{color:var(--navy);font-weight:800}
+  .empty{
+    background:#fff;border:1px dashed var(--line);border-radius:14px;padding:34px 16px;
+    text-align:center;color:var(--ink-3);font-size:13.5px;
+  }
+  .empty b{display:block;color:var(--ink-2);font-size:14.5px;margin-bottom:4px}
+
+  /* ── calendar ── */
+  .cal-top{display:flex;align-items:center;justify-content:space-between;margin:2px 0 10px;gap:8px}
+  .cal-month{font-size:16px;font-weight:800;letter-spacing:-.01em}
+  .cal-nav{display:flex;gap:6px}
+  .cal-nav button{
+    width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;
+    color:var(--ink-2);font-size:15px;font-weight:700;
+  }
+  .cal-nav button:disabled{opacity:.35}
+  .cal{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+  .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:#fafbfe;border-bottom:1px solid var(--line)}
+  .cal-dow div{text-align:center;font-size:11px;font-weight:800;color:var(--ink-3);padding:8px 0}
+  .cal-dow div:nth-child(1){color:#e0605e}
+  .cal-dow div:nth-child(7){color:#3f7ae0}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+  .cal-cell{
+    min-height:74px;border-right:1px solid #f0f2f8;border-bottom:1px solid #f0f2f8;
+    padding:4px 3px 5px;position:relative;background:#fff;
+  }
+  @media(min-width:620px){.cal-cell{min-height:96px;padding:6px}}
+  .cal-cell:nth-child(7n){border-right:0}
+  .cal-cell.out{background:#fbfcfe;color:#c3c9d6}
+  .cal-cell.today{background:#fffdf5}
+  .cal-cell.sel{box-shadow:inset 0 0 0 2px var(--brand);border-radius:6px}
+  .cal-day{font-size:11.5px;font-weight:800;color:var(--ink-2);margin:0 0 3px 2px}
+  .cal-cell.out .cal-day{color:#ccd2de}
+  .cal-cell.sun .cal-day{color:#e0605e}
+  .cal-cell.sat .cal-day{color:#3f7ae0}
+  .ev{
+    display:block;width:100%;text-align:left;border:0;border-radius:6px;
+    padding:2px 4px;margin-bottom:2px;font-size:10.5px;font-weight:700;line-height:1.28;
+    background:var(--brand-soft);color:#33419e;overflow:hidden;
+  }
+  .ev.s-소양{background:#e5f8f6;color:#0a6f6c}
+  .ev.s-취업{background:#fff4e0;color:#9a5c00}
+  .ev:active{opacity:.75}
+  .ev .ev-n{opacity:.65;font-weight:800;margin-right:2px}
+  .ev-more{font-size:10px;color:var(--ink-3);font-weight:800;padding-left:4px}
+  .cal-note{font-size:11.5px;color:var(--ink-3);margin:8px 2px 0;line-height:1.5}
+  #dayDetail{margin-top:12px}
+  #dayDetail .dd-head{font-size:13.5px;font-weight:800;margin:0 2px 7px;display:flex;justify-content:space-between;align-items:center}
+  #dayDetail .dd-head button{border:0;background:transparent;color:var(--ink-3);font-size:12.5px;font-weight:700}
+
+  /* ── table ── */
+  .tbl-wrap{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:auto;box-shadow:var(--shadow);-webkit-overflow-scrolling:touch}
+  table{border-collapse:collapse;width:100%;min-width:860px;font-size:12.5px}
+  thead th{
+    position:sticky;top:0;background:#131a3a;color:#fff;font-weight:800;font-size:11.5px;
+    padding:9px 8px;text-align:left;white-space:nowrap;z-index:2;
+  }
+  tbody td{padding:8px;border-bottom:1px solid #f0f2f8;vertical-align:top;color:var(--ink-2)}
+  tbody tr:nth-child(even) td{background:#fcfdff}
+  tbody td.tl{color:var(--ink);font-weight:600}
+  tbody td.num{text-align:center;font-variant-numeric:tabular-nums}
+  .dot-type{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
+  .dot-type.전문{background:var(--brand)}
+  .dot-type.소양{background:var(--teal)}
+  .dot-type.취업{background:var(--amber)}
+
+  footer{color:var(--ink-3);font-size:11.5px;line-height:1.65;margin-top:26px;padding:0 2px}
+  footer a{color:var(--ink-2)}
+  .err-line{color:#b4413d;font-size:12px;margin-top:8px;display:none}
+  .reveal{animation:rise .28s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="inner">
+    <div class="brand"><span class="dot"></span><span id="brandText">라온컨설팅</span></div>
+    <h1 id="pageTitle">라온컨설팅 · 강사별 강의일정 관리</h1>
+    <p class="subtitle" id="pageSub">기관·강사별 강의 일정을 한 화면에서</p>
+
+    <div class="top-row">
+      <span class="badge-sync loading" id="syncBadge"><span class="led"></span><span id="syncText">구글 시트 연결 중…</span></span>
+      <button class="icon-btn" id="resyncBtn" title="시트 새로고침" aria-label="시트 새로고침">↻</button>
+      <a class="sheet-link" id="sheetLink" href="#" target="_blank" rel="noopener">구글 시트 열기 ↗</a>
+    </div>
+
+    <div class="stats" id="stats"></div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="panel">
+    <div class="tabs" id="orgTabs"></div>
+    <div class="row2">
+      <div class="search" id="searchWrap">
+        <span class="mag">⌕</span>
+        <input id="q" type="search" inputmode="search" autocomplete="off"
+               placeholder="과목·강사·날짜·전문/소양/취업 검색">
+        <button class="clr" id="qClear" aria-label="검색 지우기">✕</button>
+      </div>
+      <select class="teach" id="teacherSel" aria-label="강사 선택"></select>
+      <div class="seg" id="viewSeg">
+        <button data-view="card" class="on">카드</button>
+        <button data-view="cal">캘린더</button>
+        <button data-view="table">표</button>
+      </div>
+    </div>
+    <div class="err-line" id="errLine"></div>
+  </div>
+
+  <div id="summary"></div>
+
+  <div id="viewArea"></div>
+
+  <footer>
+    <div id="footNote"></div>
+    <div id="footSource" style="margin-top:6px"></div>
+  </footer>
+</div>
+
+<script>
+/* =========================================================================
+   1) 여기만 고치면 됩니다 — 제목·시트 주소
+   ========================================================================= */
+const CONFIG = {
+  title: '라온컨설팅 · 강사별 강의일정 관리',
+  brand: '라온컨설팅',
+  subtitle: '기관·강사별 강의 일정을 한 화면에서',
+  sheetId: '1vIsvogOo04gJ2tNbRJDnz2T_4wiPrktnVc0Q5xzdjfY',
+  sheetUrl: 'https://docs.google.com/spreadsheets/d/1vIsvogOo04gJ2tNbRJDnz2T_4wiPrktnVc0Q5xzdjfY/edit',
+  ogImage: 'https://jaechanbit.github.io/instructor-schedule/og-image.png'
+};
+
+/* =========================================================================
+   2) 시트를 못 읽어도 바로 보이도록 넣어둔 내장 데이터 (37건)
+   ========================================================================= */
+const FALLBACK_ROWS = [{"기관":"[샘플] 비트컴퓨터학원","회차":1,"일자":"2027-01-12","요일":"화","강의과목":"AI 업무 자동화 특강 1일차 — 생성형 AI로 반복 업무 줄이기","이론":2,"실습":2,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"안재찬","주강사소속":"라온컨설팅 대표","보조강사":"김하늘","보조강사소속":"비트컴퓨터학원 강사","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"[샘플] 비트컴퓨터학원","회차":2,"일자":"2027-01-19","요일":"화","강의과목":"AI 업무 자동화 특강 2일차 — 업무 도우미 제작 실습","이론":0,"실습":4,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"안재찬","주강사소속":"라온컨설팅 대표","보조강사":"김하늘","보조강사소속":"비트컴퓨터학원 강사","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":1,"일자":"2027-04-06","요일":"화","강의과목":"오리엔테이션(과정소개) / AI·AX 시대의 업무 활용","이론":2,"실습":2,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"장미희","주강사소속":"교육컨설턴트연구소 대표","보조강사":"한혜정","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"소양","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":2,"일자":"2027-04-07","요일":"수","강의과목":"나의 AI 업무 역량 진단과 성장 로드맵 설계","이론":1,"실습":3,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"이성자","주강사소속":"역심리상담센터 소장","보조강사":"한혜정","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"소양","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":3,"일자":"2027-04-08","요일":"목","강의과목":"디지털 자료 관리와 업(구글드라이브 협업)","이론":1,"실습":3,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"이현미","주강사소속":"에이스아이티교육연구소 대표","보조강사":"한혜정","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":4,"일자":"2027-04-12","요일":"월","강의과목":"나만의 업무 공간 구축(노션, GitHub)","이론":1,"실습":3,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"이현미","주강사소속":"에이스아이티교육연구소 대표","보조강사":"한혜정","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":5,"일자":"2027-04-13","요일":"화","강의과목":"생성형 AI 모델별 활용법과 실무 프롬프트 설계","이론":2,"실습":2,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"장미희","주강사소속":"교육컨설턴트연구소 대표","보조강사":"송지윤","보조강사소속":"AIDEAR 강사","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":6,"일자":"2027-04-14","요일":"수","강의과목":"AI를 활용한 문서·음성 자료 분석과 업무자료 제작","이론":2,"실습":2,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"장미희","주강사소속":"교육컨설턴트연구소 대표","보조강사":"송지윤","보조강사소속":"AIDEAR 강사","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":7,"일자":"2027-04-15","요일":"목","강의과목":"매출·고객 자료 분석과 시각화 및 업무 보고서 작성","이론":2,"실습":2,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"장미희","주강사소속":"교육컨설턴트연구소 대표","보조강사":"송지윤","보조강사소속":"AIDEAR 강사","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":8,"일자":"2027-04-19","요일":"월","강의과목":"AI로 찾는 현장 문제와 사업 아이디어 기획","이론":1,"실습":3,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"장미희","주강사소속":"교육컨설턴트연구소 대표","보조강사":"송지윤","보조강사소속":"AIDEAR 강사","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":9,"일자":"2027-04-20","요일":"화","강의과목":"반복 업무를 줄이는 나만의 AI 업무 도우미 제작","이론":0,"실습":4,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"장미희","주강사소속":"교육컨설턴트연구소 대표","보조강사":"송지윤","보조강사소속":"AIDEAR 강사","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":10,"일자":"2027-04-21","요일":"수","강의과목":"공공데이터로 읽는 지역 산업과 사업 기회","이론":0,"실습":4,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"송경순","주강사소속":"인아이티 대표","보조강사":"한혜정","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":11,"일자":"2027-04-22","요일":"목","강의과목":"데이터로 검증하는 업무개선 기획서 작성","이론":0,"실습":4,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"송경순","주강사소속":"인아이티 대표","보조강사":"한혜정","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":12,"일자":"2027-04-26","요일":"월","강의과목":"AI윤리·저작권·개인 보호와 지역 콘텐츠 산업","이론":2,"실습":2,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"박용남","주강사소속":"에니설리반학교 대표","보조강사":"","보조강사소속":"","훈련내용":"소양","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":13,"일자":"2027-04-27","요일":"화","강의과목":"AI 브랜드 홍보물·제안서 기획","이론":1,"실습":3,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"이현미","주강사소속":"에이스아이티교육연구소 대표","보조강사":"박은경","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":14,"일자":"2027-04-28","요일":"수","강의과목":"AI로 만드는 업무 홍보물 제작","이론":1,"실습":3,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"이현미","주강사소속":"에이스아이티교육연구소 대표","보조강사":"박은경","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":15,"일자":"2027-04-29","요일":"목","강의과목":"고객의 선택을 이끄는 SNS 콘텐츠·상세페이지 기획","이론":2,"실습":2,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"이현미","주강사소속":"에이스아이티교육연구소 대표","보조강사":"박은경","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":16,"일자":"2027-05-06","요일":"목","강의과목":"AI 콘텐츠 자동화 도우미 제작","이론":0,"실습":4,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"이현미","주강사소속":"에이스아이티교육연구소 대표","보조강사":"박은경","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":17,"일자":"2027-05-07","요일":"금","강의과목":"고객의 관심을 끄는 숏폼 영상 기획과 스크립트 작성","이론":2,"실습":2,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"정서연","주강사소속":"스마트 IT 교육연구소 대표","보조강사":"박은경","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":18,"일자":"2027-05-10","요일":"월","강의과목":"생성형 AI 영상 제작과 실무 편집","이론":0,"실습":4,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"정서연","주강사소속":"스마트 IT 교육연구소 대표","보조강사":"박은경","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":19,"일자":"2027-05-11","요일":"화","강의과목":"영상 콘텐츠 자동 제작 도우미 만들기","이론":0,"실습":4,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"정서연","주강사소속":"스마트 IT 교육연구소 대표","보조강사":"박은경","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":20,"일자":"2027-05-12","요일":"수","강의과목":"바이브 코딩1 업무 프로그램 기획서 작성","이론":2,"실습":2,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"송경순","주강사소속":"인아이티 대표","보조강사":"이은영","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":21,"일자":"2027-05-17","요일":"월","강의과목":"바이브 코딩2 AI와 대화하며 만드는 화면 제작과 구매 유도 설계","이론":1,"실습":3,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"송경순","주강사소속":"인아이티 대표","보조강사":"이은영","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":22,"일자":"2027-05-18","요일":"화","강의과목":"바이브 코딩3 고객·상품 정보를 관리하는 업무 프로그램 제작","이론":1,"실습":3,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"송경순","주강사소속":"인아이티 대표","보조강사":"이은영","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":23,"일자":"2027-05-19","요일":"수","강의과목":"바이브 코딩4 신청·조회·관리 기능을 갖춘 업무 프로그램 완성","이론":1,"실습":3,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"송경순","주강사소속":"인아이티 대표","보조강사":"이은영","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":24,"일자":"2027-05-20","요일":"목","강의과목":"바이브 코딩5 웹서비스 점검·배포","이론":1,"실습":3,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"송경순","주강사소속":"인아이티 대표","보조강사":"이은영","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":25,"일자":"2027-05-24","요일":"월","강의과목":"업무 자동화 설계 1: 반복 업무 찾기와 자동화 설계","이론":1,"실습":3,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"안재찬","주강사소속":"라온컨설팅 대표","보조강사":"이은영","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":26,"일자":"2027-05-25","요일":"화","강의과목":"업무 자동화 설계 2: 고객 응대 업무 자동화","이론":0,"실습":4,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"안재찬","주강사소속":"라온컨설팅 대표","보조강사":"이은영","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":27,"일자":"2027-05-26","요일":"수","강의과목":"업무 자동화 설계 3: 바이브 코딩과 자동화 연결","이론":0,"실습":4,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"안재찬","주강사소속":"라온컨설팅 대표","보조강사":"이은영","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":28,"일자":"2027-05-27","요일":"목","강의과목":"현장 프로젝트 1: 업체 진단과 사업 모델 정리","이론":0,"실습":0,"현장실습":4,"현장견학":0,"총시수":4,"주강사":"장미희","주강사소속":"교육컨설턴트연구소 대표","보조강사":"이은희","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":29,"일자":"2027-05-31","요일":"월","강의과목":"현장 프로젝트 2: 업체 맞춤 홍보 콘텐츠 제작","이론":0,"실습":0,"현장실습":4,"현장견학":0,"총시수":4,"주강사":"장미희","주강사소속":"교육컨설턴트연구소 대표","보조강사":"이은희","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":30,"일자":"2027-06-01","요일":"화","강의과목":"현장 프로젝트 3: 업체 맞춤 AI 업무 도구 구축","이론":0,"실습":0,"현장실습":4,"현장견학":0,"총시수":4,"주강사":"장미희","주강사소속":"교육컨설턴트연구소 대표","보조강사":"이은희","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":31,"일자":"2027-06-02","요일":"수","강의과목":"현장 프로젝트 4: 업체 맞춤 AI 업무 도구 구축 완료","이론":0,"실습":0,"현장실습":4,"현장견학":0,"총시수":4,"주강사":"장미희","주강사소속":"교육컨설턴트연구소 대표","보조강사":"이은희","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":32,"일자":"2027-06-03","요일":"목","강의과목":"사회적 경제와 공동체 창업","이론":4,"실습":0,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"박용남","주강사소속":"에니설리반학교 대표","보조강사":"","보조강사소속":"","훈련내용":"취업","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":33,"일자":"2027-06-07","요일":"월","강의과목":"AI로 쓰는 정부지원사업 및 사업계획서 작성","이론":2,"실습":2,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"박용남","주강사소속":"에니설리반학교 대표","보조강사":"","보조강사소속":"","훈련내용":"전문","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":34,"일자":"2027-06-08","요일":"화","강의과목":"포트폴리오 완성 이력서 작성 및 AI 모의 면접","이론":0,"실습":4,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"장미희","주강사소속":"교육컨설턴트연구소 대표","보조강사":"이은희","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"취업","온오프라인":"오프라인","상태":"예정"},{"기관":"전북새일","회차":35,"일자":"2027-06-09","요일":"수","강의과목":"성과 발표(데모데이)수료","이론":0,"실습":4,"현장실습":0,"현장견학":0,"총시수":4,"주강사":"장미희","주강사소속":"교육컨설턴트연구소 대표","보조강사":"이은희","보조강사소속":"교육컨설턴트연구소 팀장","훈련내용":"소양","온오프라인":"오프라인","상태":"예정"}];
+
+/* =========================================================================
+   3) 상태
+   ========================================================================= */
+const COLS = ["기관","회차","일자","요일","강의과목","이론","실습","현장실습","현장견학","총시수","주강사","주강사소속","보조강사","보조강사소속","훈련내용","온오프라인","상태"];
+const DOW = ['일','월','화','수','목','금','토'];
+let ROWS = [];
+let SOURCE = 'embedded';       // 'sheet' | 'embedded'
+let state = { org:'전체', teacher:'', q:'', view:'card', month:null, day:null, expanded:false };
+
+/* =========================================================================
+   4) 유틸
+   ========================================================================= */
+const $  = s => document.querySelector(s);
+const el = (tag, cls, html) => { const n=document.createElement(tag); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; };
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = v => { const n=Number(v); return isFinite(n)?n:0; };
+
+function parseDate(s){
+  const m = String(s||'').match(/(\d{4})\D*(\d{1,2})\D*(\d{1,2})/);
+  if(!m) return null;
+  return new Date(+m[1], +m[2]-1, +m[3]);
+}
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function fmtDateShort(d){ return `${d.getMonth()+1}.${d.getDate()}`; }
+
+/* =========================================================================
+   5) 데이터 정규화
+   ========================================================================= */
+function normalize(list){
+  const out = list.map((raw, i) => {
+    const r = {};
+    if (Array.isArray(raw)) { COLS.forEach((c, j)=> r[c] = raw[j]); }
+    else { COLS.forEach(c => r[c] = raw[c]); }
+    const clean = {};
+    COLS.forEach(c => {
+      let v = r[c];
+      if (c === '이론' || c === '실습' || c === '현장실습' || c === '현장견학' || c === '총시수') v = num(v);
+      else if (c === '회차') v = num(v);
+      else v = (v == null ? '' : String(v).trim());
+      clean[c] = v;
+    });
+    clean._d = parseDate(clean['일자']);
+    clean._i = i;
+    clean._org = clean['기관'] || '기관 미지정';
+    clean._sum = clean['이론']+clean['실습']+clean['현장실습']+clean['현장견학'];
+    return clean;
+  }).filter(r => r['강의과목'] || r['주강사'] || r._d);
+  out.sort((a,b)=> (a._d?a._d.getTime():0) - (b._d?b._d.getTime():0) || a['회차']-b['회차']);
+  return out;
+}
+
+/* =========================================================================
+   6) 구글 시트 GViz 읽기 (JSONP — CORS 우회, 실패 시 내장 데이터 유지)
+   ========================================================================= */
+let syncTimer = null;
+function setSync(kind, text, tip){
+  const b = $('#syncBadge');
+  b.className = 'badge-sync ' + kind;
+  $('#syncText').textContent = text;
+  b.title = tip || '';
+}
+function nowHM(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function loadSheet(){
+  return new Promise((resolve, reject) => {
+    let done = false;
+    const script = document.createElement('script');
+    const finish = (fn, arg) => {
+      if (done) return; done = true;
+      clearTimeout(syncTimer);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      fn(arg);
+    };
+    window.google = window.google || {};
+    window.google.visualization = window.google.visualization || {};
+    window.google.visualization.Query = window.google.visualization.Query || {};
+    window.google.visualization.Query.setResponse = resp => finish(resolve, resp);
+    script.src = 'https://docs.google.com/spreadsheets/d/' + CONFIG.sheetId +
+                 '/gviz/tq?tqx=out:json&headers=1&_=' + Date.now();
+    script.onerror = () => finish(reject, new Error('시트 스크립트를 불러오지 못했습니다'));
+    syncTimer = setTimeout(() => finish(reject, new Error('시트 응답 시간 초과')), 9000);
+    document.head.appendChild(script);
+  });
+}
+function gvizToObjects(resp){
+  const t = resp && resp.table;
+  if (!t || !t.cols) throw new Error('시트 응답 형식이 아닙니다');
+  if (resp.status && resp.status !== 'ok') {
+    const msg = (resp.errors && resp.errors[0] && resp.errors[0].detailed_message) || resp.status;
+    throw new Error('시트 오류: ' + msg);
+  }
+  const labels = t.cols.map(c => String(c.label || c.id || '').trim());
+  const rows = (t.rows || []).map(r => {
+    const o = {};
+    (r.c || []).forEach((cell, j) => {
+      const key = labels[j];
+      const v = cell ? (cell.f != null ? cell.f : cell.v) : '';
+      o[key] = v;
+    });
+    return o;
+  }).filter(o => Object.keys(o).length);
+  return rows;
+}
+async function syncFromSheet(showToast){
+  setSync('loading', '구글 시트 연결 중…');
+  try {
+    const resp = await loadSheet();
+    const objs = gvizToObjects(resp);
+    const rows = normalize(objs);
+    if (!rows.length) throw new Error('시트에 일정 데이터가 없습니다');
+    ROWS = rows; SOURCE = 'sheet';
+    setSync('live', '실시간 동기화 · ' + nowHM(), '구글 시트에서 방금 읽어왔습니다');
+    $('#errLine').style.display = 'none';
+    onDataChanged();
+  } catch (e) {
+    ROWS = normalize(FALLBACK_ROWS); SOURCE = 'embedded';
+    setSync('local', '내장 데이터 표시 중', (e && e.message ? e.message + ' · ' : '') + '내장 데이터(37건)로 표시합니다');
+    const line = $('#errLine');
+    line.textContent = '구글 시트를 읽지 못해 내장 데이터로 표시 중입니다. (' + (e && e.message ? e.message : '오류') + ')';
+    line.style.display = 'block';
+    onDataChanged();
+  }
+}
+
+/* =========================================================================
+   7) 필터
+   ========================================================================= */
+function teacherList(){
+  const main = new Set(), sub = new Set();
+  ROWS.forEach(r => { if (r['주강사']) main.add(r['주강사']); if (r['보조강사']) sub.add(r['보조강사']); });
+  const all = Array.from(new Set([...main, ...sub]));
+  all.sort((a,b)=>a.localeCompare(b,'ko'));
+  return { all, main, sub };
+}
+function orgList(){
+  const cnt = {};
+  ROWS.forEach(r => { cnt[r._org] = (cnt[r._org]||0) + 1; });
+  return Object.keys(cnt).sort((a,b)=> (cnt[b]-cnt[a]) || a.localeCompare(b,'ko'));
+}
+function matches(r){
+  if (state.org !== '전체' && r._org !== state.org) return false;
+  if (state.teacher && r['주강사'] !== state.teacher && r['보조강사'] !== state.teacher) return false;
+  const q = state.q.trim().toLowerCase();
+  if (q) {
+    const d = r._d;
+    const hay = [
+      r['강의과목'], r['주강사'], r['보조강사'], r['주강사소속'], r['보조강사소속'],
+      r['훈련내용'], r._org, r['요일'],
+      r['일자'], d ? d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0') : '',
+      d ? (d.getMonth()+1)+'.'+d.getDate() : '',
+      d ? String(d.getMonth()+1)+'월' : '',
+      String(r['회차'])+'회차'
+    ].join(' ').toLowerCase();
+    const terms = q.split(/\s+/).filter(Boolean);
+    if (!terms.every(t => hay.includes(t))) return false;
+  }
+  return true;
+}
+function filtered(){ return ROWS.filter(matches); }
+
+/* =========================================================================
+   8) 렌더
+   ========================================================================= */
+function applyConfig(){
+  document.title = CONFIG.title;
+  $('#pageTitle').textContent = CONFIG.title;
+  $('#brandText').textContent = CONFIG.brand;
+  $('#pageSub').textContent = CONFIG.subtitle;
+  $('#sheetLink').href = CONFIG.sheetUrl;
+  const og = document.querySelector('meta[property="og:title"]');
+  if (og && og.content !== CONFIG.title) og.content = CONFIG.title;
+}
+function onDataChanged(){
+  state.month = null; state.day = null; state.expanded = false;
+  renderTabs(); renderTeacherSelect(); renderStats(); renderSummary(); renderView();
+  renderFoot();
+}
+function renderTabs(){
+  const box = $('#orgTabs'); box.innerHTML = '';
+  const orgs = ['전체', ...orgList()];
+  orgs.forEach(o => {
+    const n = o === '전체' ? ROWS.length : ROWS.filter(r => r._org === o).length;
+    const b = el('button', 'tab' + (state.org === o ? ' on' : ''), esc(o) + '<span class="cnt">' + n + '</span>');
+    b.onclick = () => { state.org = o; renderTabs(); renderView(); renderStats(); };
+    box.appendChild(b);
+  });
+}
+function renderTeacherSelect(){
+  const { all, main, sub } = teacherList();
+  const sel = $('#teacherSel');
+  const keep = state.teacher;
+  sel.innerHTML = '';
+  const opt0 = el('option', null, '전체 강사'); opt0.value = ''; sel.appendChild(opt0);
+  const g1 = el('optgroup'); g1.label = '주강사';
+  Array.from(main).sort((a,b)=>a.localeCompare(b,'ko')).forEach(t => { const o=el('option',null,t); o.value=t; g1.appendChild(o); });
+  const g2 = el('optgroup'); g2.label = '보조강사';
+  Array.from(sub).filter(t=>!main.has(t)).sort((a,b)=>a.localeCompare(b,'ko')).forEach(t => { const o=el('option',null,t); o.value=t; g2.appendChild(o); });
+  sel.appendChild(g1); sel.appendChild(g2);
+  sel.value = all.includes(keep) ? keep : '';
+  state.teacher = sel.value;
+}
+function renderStats(){
+  const rows = ROWS.filter(r => state.org === '전체' || r._org === state.org);
+  const hours = rows.reduce((s,r)=>s+r._sum,0);
+  const ds = rows.map(r=>r._d).filter(Boolean).sort((a,b)=>a-b);
+  const span = ds.length ? fmtDateShort(ds[0]) + ' ~ ' + fmtDateShort(ds[ds.length-1]) : '—';
+  const teachers = new Set(); rows.forEach(r=>{ if(r['주강사'])teachers.add(r['주강사']); if(r['보조강사'])teachers.add(r['보조강사']); });
+  $('#stats').innerHTML =
+    '<div class="stat"><b>'+rows.length+'회차</b><span>일정</span></div>' +
+    '<div class="stat"><b>'+hours+'시간</b><span>총 시수</span></div>' +
+    '<div class="stat"><b>'+teachers.size+'명</b><span>참여 강사</span></div>' +
+    '<div class="stat"><b>'+esc(span)+'</b><span>기간</span></div>';
+}
+function renderSummary(){
+  const box = $('#summary');
+  const t = state.teacher;
+  if (!t) { box.className = ''; box.innerHTML = ''; return; }
+  const rows = ROWS.filter(r => r['주강사'] === t || r['보조강사'] === t);
+  const mainCnt = rows.filter(r=>r['주강사']===t).length;
+  const subCnt  = rows.filter(r=>r['보조강사']===t).length;
+  const th = rows.reduce((s,r)=>s+r._sum,0);
+  const theo = rows.reduce((s,r)=>s+r['이론'],0);
+  const prac = rows.reduce((s,r)=>s+r['실습'],0);
+  const field = rows.reduce((s,r)=>s+r['현장실습']+r['현장견학'],0);
+  const orgs = [];
+  rows.forEach(r=>{ if(!orgs.includes(r._org)) orgs.push(r._org); });
+  const roleTxt = [mainCnt ? '주강사 '+mainCnt+'회' : '', subCnt ? '보조강사 '+subCnt+'회' : ''].filter(Boolean).join(' · ');
+  const ds = rows.map(r=>r._d).filter(Boolean).sort((a,b)=>a-b);
+  const per = ds.length ? fmtDateShort(ds[0])+' ~ '+fmtDateShort(ds[ds.length-1]) : '';
+  box.className = 'show reveal';
+  box.innerHTML =
+    '<div class="sum-card">' +
+      '<div class="sum-head">' +
+        '<div class="avatar">'+esc(t.slice(0,1))+'</div>' +
+        '<div><div class="sum-name">'+esc(t)+'</div><div class="sum-role">'+esc(roleTxt || '배정 없음')+(per?' · '+esc(per):'')+'</div></div>' +
+      '</div>' +
+      '<div class="sum-grid">' +
+        '<div class="sum-box"><b>'+rows.length+'회</b><span>총 회차</span></div>' +
+        '<div class="sum-box"><b>'+th+'시간</b><span>총 시수</span></div>' +
+        '<div class="sum-box"><b>'+theo+' / '+prac+' / '+field+'</b><span>이론 / 실습 / 현장</span></div>' +
+        '<div class="sum-box"><b>'+orgs.length+'곳</b><span>담당 기관</span></div>' +
+      '</div>' +
+      '<div class="sum-orgs">담당 기관 ' + orgs.map(o=>'<span class="org-chip">'+esc(o)+'</span>').join('') + '</div>' +
+    '</div>';
+}
+function renderView(){
+  const area = $('#viewArea');
+  const rows = filtered();
+  area.innerHTML = '';
+  $('#viewSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.view===state.view));
+  if (state.view === 'card') renderCards(area, rows);
+  else if (state.view === 'cal') renderCalendar(area, rows);
+  else renderTable(area, rows);
+}
+function emptyBox(msg){
+  return '<div class="empty"><b>일정이 없습니다</b>' + esc(msg) + '</div>';
+}
+function renderCards(area, rows){
+  const head = el('div','sec-title');
+  head.innerHTML = '<h2>일정 '+rows.length+'건</h2><span class="hint">' +
+    (state.org==='전체'?'전체 기관':esc(state.org)) + (state.teacher?' · '+esc(state.teacher):'') + '</span>';
+  area.appendChild(head);
+  if (!rows.length) { area.appendChild(el('div', null, emptyBox('조건을 바꾸거나 검색어를 지워보세요.'))); return; }
+  const limit = state.expanded ? rows.length : Math.min(rows.length, 12);
+  const grid = el('div','cards');
+  rows.slice(0, limit).forEach(r => grid.appendChild(cardFor(r)));
+  area.appendChild(grid);
+  if (rows.length > limit) {
+    const more = el('button','tab','나머지 ' + (rows.length-limit) + '건 더 보기');
+    more.style.margin = '12px auto 0'; more.style.display='block';
+    more.onclick = () => { state.expanded = true; renderView(); };
+    area.appendChild(more);
+  }
+}
+function cardFor(r){
+  const c = el('div','card t-' + (r['훈련내용']||''));
+  const dTxt = r._d ? (r._d.getMonth()+1)+'.'+r._d.getDate()+'('+r['요일']+')' : r['일자'];
+  const sub = r['보조강사'] ? '<b>'+esc(r['보조강사'])+'</b>'+(r['보조강사소속']?'<span style="color:var(--ink-3)"> '+esc(r['보조강사소속'])+'</span>':'') : '<span style="color:var(--ink-3)">—</span>';
+  const hours = [];
+  if (r['이론']) hours.push('<span class="hchip">이론 <b>'+r['이론']+'</b></span>');
+  if (r['실습']) hours.push('<span class="hchip">실습 <b>'+r['실습']+'</b></span>');
+  if (r['현장실습']) hours.push('<span class="hchip">현장실습 <b>'+r['현장실습']+'</b></span>');
+  if (r['현장견학']) hours.push('<span class="hchip">현장견학 <b>'+r['현장견학']+'</b></span>');
+  hours.push('<span class="hchip">총 <b>'+r._sum+'</b>시간</span>');
+  c.innerHTML =
+    '<div class="c-top">'+
+      '<span class="pill date">'+esc(dTxt)+'</span>'+
+      '<span class="pill sec">'+esc(r._org)+'</span>'+
+      '<span class="pill sec">'+esc(r['회차'])+'회차</span>'+
+      (r['훈련내용'] ? '<span class="pill type '+esc(r['훈련내용'])+'">'+esc(r['훈련내용'])+'</span>' : '')+
+      (r['상태'] ? '<span class="pill status">'+esc(r['상태'])+'</span>' : '')+
+    '</div>'+
+    '<p class="c-title">'+esc(r['강의과목']||'과목 미정')+'</p>'+
+    '<div class="c-meta">'+
+      '<span>주강사 <b>'+esc(r['주강사']||'—')+'</b>'+(r['주강사소속']?' <span style="color:var(--ink-3)">'+esc(r['주강사소속'])+'</span>':'')+'</span>'+
+      '<span>보조 '+sub+'</span>'+
+    '</div>'+
+    '<div class="c-hours">'+hours.join('')+'</div>';
+  return c;
+}
+function renderCalendar(area, rows){
+  const months = Array.from(new Set(rows.filter(r=>r._d).map(r=>r._d.getFullYear()+'-'+String(r._d.getMonth()+1).padStart(2,'0')))).sort();
+  if (!months.length) { area.appendChild(el('div',null,emptyBox('해당 조건에 날짜가 있는 일정이 없습니다.'))); return; }
+  if (!state.month || !months.includes(state.month)) state.month = months[0];
+
+  const [yy, mm] = state.month.split('-').map(Number);
+  const first = new Date(yy, mm-1, 1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(yy, mm, 0).getDate();
+
+  const top = el('div','cal-top');
+  top.innerHTML = '<div class="cal-month">'+yy+'년 '+mm+'월</div>';
+  const nav = el('div','cal-nav');
+  const prev = el('button',null,'‹'), next = el('button',null,'›');
+  const idx = months.indexOf(state.month);
+  prev.disabled = idx <= 0; next.disabled = idx >= months.length-1;
+  prev.onclick = () => { state.month = months[idx-1]; state.day=null; renderView(); };
+  next.onclick = () => { state.month = months[idx+1]; state.day=null; renderView(); };
+  nav.appendChild(prev); nav.appendChild(next); top.appendChild(nav);
+  area.appendChild(top);
+
+  const cal = el('div','cal');
+  const dow = el('div','cal-dow');
+  DOW.forEach(d => dow.appendChild(el('div',null,d)));
+  cal.appendChild(dow);
+  const grid = el('div','cal-grid');
+
+  const byDay = {};
+  rows.forEach(r => { if (!r._d) return; const k = ymd(r._d); (byDay[k] = byDay[k] || []).push(r); });
+
+  const prevMonthDays = new Date(yy, mm-1, 0).getDate();
+  for (let i=0;i<startDow;i++){
+    const cell = el('div','cal-cell out');
+    cell.appendChild(el('div','cal-day', String(prevMonthDays - startDow + 1 + i)));
+    grid.appendChild(cell);
+  }
+  const today = ymd(new Date());
+  for (let d=1; d<=daysInMonth; d++){
+    const key = yy+'-'+String(mm).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const items = byDay[key] || [];
+    const cell = el('div','cal-cell' + (key===today?' today':''));
+    const dowIdx = new Date(yy, mm-1, d).getDay();
+    if (dowIdx === 0) cell.classList.add('sun');
+    if (dowIdx === 6) cell.classList.add('sat');
+    if (state.day === key) cell.classList.add('sel');
+    cell.appendChild(el('div','cal-day', String(d)));
+    items.slice(0,3).forEach(r => {
+      const b = el('button','ev s-' + (r['훈련내용']||''), '<span class="ev-n">'+esc(r['회차'])+'</span>'+esc((r['강의과목']||'').slice(0,14)));
+      b.title = r['강의과목']+' · '+r['주강사'];
+      b.onclick = ev => { ev.stopPropagation(); state.day = key; renderView(); };
+      cell.appendChild(b);
+    });
+    if (items.length > 3) cell.appendChild(el('div','ev-more','+'+(items.length-3)));
+    cell.onclick = () => { state.day = (state.day === key ? null : key); renderView(); };
+    grid.appendChild(cell);
+  }
+  const tail = (7 - ((startDow + daysInMonth) % 7)) % 7;
+  for (let i=1;i<=tail;i++){
+    const cell = el('div','cal-cell out');
+    cell.appendChild(el('div','cal-day', String(i)));
+    grid.appendChild(cell);
+  }
+  cal.appendChild(grid);
+  area.appendChild(cal);
+  area.appendChild(el('div','cal-note','색상: <b>전문</b>=보라 · <b>소양</b>=청록 · <b>취업</b>=주황. 날짜를 눌러 그날 일정을 확인하세요.'));
+
+  const dd = el('div'); dd.id='dayDetail';
+  if (state.day) {
+    const items = (byDay[state.day] || []).slice();
+    const dObj = parseDate(state.day);
+    dd.innerHTML = '<div class="dd-head"><span>'+(dObj?(dObj.getMonth()+1)+'월 '+dObj.getDate()+'일 ('+DOW[dObj.getDay()]+')':state.day)+' · '+items.length+'건</span><button id="ddClose">닫기 ✕</button></div>';
+    const g = el('div','cards');
+    items.forEach(r => g.appendChild(cardFor(r)));
+    dd.appendChild(g);
+    area.appendChild(dd);
+    const close = dd.querySelector('#ddClose');
+    if (close) close.onclick = () => { state.day = null; renderView(); };
+  }
+}
+function renderTable(area, rows){
+  const head = el('div','sec-title');
+  const tot = rows.reduce((s,r)=>s+r._sum,0);
+  head.innerHTML = '<h2>전체 표 · '+rows.length+'건</h2><span class="hint">합계 '+tot+'시간 · 옆으로 넘겨 보세요</span>';
+  area.appendChild(head);
+  if (!rows.length){ area.appendChild(el('div',null,emptyBox('조건에 맞는 일정이 없습니다.'))); return; }
+  const wrap = el('div','tbl-wrap');
+  const t = el('table');
+  t.innerHTML = '<thead><tr>'+
+    ['회차','일자','기관','강의과목','이론','실습','현장실습','총시수','주강사','보조강사','훈련내용','상태']
+      .map(h=>'<th>'+h+'</th>').join('')+'</tr></thead>';
+  const tb = el('tbody');
+  rows.forEach(r=>{
+    const tr = el('tr');
+    const dTxt = r._d ? (r._d.getMonth()+1)+'.'+r._d.getDate()+'('+r['요일']+')' : r['일자'];
+    tr.innerHTML =
+      '<td class="num">'+esc(r['회차'])+'</td>'+
+      '<td style="white-space:nowrap">'+esc(dTxt)+'</td>'+
+      '<td style="white-space:nowrap">'+esc(r._org)+'</td>'+
+      '<td class="tl">'+esc(r['강의과목'])+'</td>'+
+      '<td class="num">'+(r['이론']||'·')+'</td>'+
+      '<td class="num">'+(r['실습']||'·')+'</td>'+
+      '<td class="num">'+(r['현장실습']||'·')+'</td>'+
+      '<td class="num"><b>'+r._sum+'</b></td>'+
+      '<td style="white-space:nowrap">'+esc(r['주강사'])+'</td>'+
+      '<td style="white-space:nowrap">'+esc(r['보조강사']||'—')+'</td>'+
+      '<td style="white-space:nowrap">'+(r['훈련내용']?'<span class="dot-type '+esc(r['훈련내용'])+'"></span>'+esc(r['훈련내용']):'')+'</td>'+
+      '<td style="white-space:nowrap">'+esc(r['상태']||'')+'</td>';
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); wrap.appendChild(t); area.appendChild(wrap);
+}
+function renderFoot(){
+  const theo = ROWS.reduce((s,r)=>s+r['이론'],0);
+  const prac = ROWS.reduce((s,r)=>s+r['실습'],0);
+  const field = ROWS.reduce((s,r)=>s+r['현장실습'],0);
+  const tot = ROWS.reduce((s,r)=>s+r._sum,0);
+  const ty = {};
+  ROWS.forEach(r=>{ ty[r['훈련내용']] = (ty[r['훈련내용']]||0) + r._sum; });
+  $('#footNote').innerHTML =
+    '전체 '+ROWS.length+'건 · 이론 <b>'+theo+'</b> / 실습 <b>'+prac+'</b> / 현장실습 <b>'+field+'</b> = <b>'+tot+'시간</b>' +
+    ' · 훈련내용 ' + Object.keys(ty).filter(k=>k).map(k=>k+' '+ty[k]).join(' · ');
+  $('#footSource').innerHTML =
+    '데이터: <a href="'+CONFIG.sheetUrl+'" target="_blank" rel="noopener">강의일정 통합 관리 대장</a>(구글 시트) · ' +
+    (SOURCE==='sheet' ? "시트에서 실시간으로 읽어옵니다." : "지금은 내장 데이터로 표시 중이며, 시트가 열리면 자동으로 최신 데이터를 씁니다.") +
+    ' · 원본 강의계획표는 월·일만 있어 요일과 일치하는 연도(2027)로 일자를 표시합니다.';
+}
+
+/* =========================================================================
+   9) 이벤트
+   ========================================================================= */
+function wire(){
+  $('#q').addEventListener('input', e => {
+    state.q = e.target.value;
+    $('#searchWrap').classList.toggle('has', !!state.q);
+    state.expanded = false;
+    renderView();
+  });
+  $('#qClear').onclick = () => { $('#q').value=''; state.q=''; $('#searchWrap').classList.remove('has'); renderView(); };
+  $('#teacherSel').onchange = e => { state.teacher = e.target.value; renderSummary(); renderView(); };
+  $('#viewSeg').addEventListener('click', e => {
+    const b = e.target.closest('button[data-view]');
+    if (!b) return;
+    state.view = b.dataset.view; renderView();
+  });
+  $('#resyncBtn').onclick = () => syncFromSheet();
+}
+
+/* =========================================================================
+   10) 시작
+   ========================================================================= */
+applyConfig();
+ROWS = normalize(FALLBACK_ROWS);
+wire();
+onDataChanged();
+syncFromSheet();
+</script>
+</body>
+</html>
