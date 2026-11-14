@@ -1594,6 +1594,16 @@ function pdfBuildColumns(cells){
   });
   cols.sort((a,b)=>a.mid-b.mid);
   cols.forEach((c,i)=>c.idx = i);
+  cols.forEach(c => {
+    const j = c.labels.join('');
+    const has = t => c.labels.indexOf(t) >= 0;
+    if (has('현장') && has('실습')) c.labels = ['현장실습'];
+    else if (has('현장') && has('견학')) c.labels = ['현장견학'];
+    else if (/온라/.test(j) && /인$/.test(j)) c.labels = ['온라인'];
+    else if (/오프/.test(j)) c.labels = ['오프라인'];
+    else if (/강의/.test(j) && /과목/.test(j)) c.labels = ['강의과목'];
+    else if (/강의/.test(j) && /시수/.test(j)) c.labels = ['강의시수'];
+  });
   PDF_HDR.forEach(([key, re]) => {
     const hit = cols.find(c => !c.key && c.labels.some(l => re.test(l)));
     if (hit) hit.key = key;
@@ -1614,7 +1624,7 @@ function pdfLinesToRows(lines, cols){
     const at = idx => { const c = l.cells.find(cc => nearest((cc.x0+cc.x1)/2) === idx); return c ? c.s : ''; };
     const rowNum = numCol ? at(numCol.idx).replace(/\s/g,'') : '';
     const dateTxt = dateCol ? at(dateCol.idx) : '';
-    const starts = /^\d{1,2}$/.test(rowNum) || (!numCol && /\d{1,2}\s*\/\s*\d{1,2}/.test(dateTxt));
+    const starts = /^\d{1,2}$/.test(rowNum) || (dateCol && /\d{1,2}\s*\/\s*\d{1,2}/.test(dateTxt.replace(/\s/g,'')));
     if (starts) rows.push(new Array(cols.length).fill(''));
     if (!rows.length) return;
     const row = rows[rows.length-1];
@@ -1649,12 +1659,13 @@ async function parsePdfFile(file){
     itemCount += items.length;
     if (!items.length) continue;
     const lines = pdfGroupLines(items);
-    const hdrCells = []; let lastHeader = -1;
+    const hdrCells = []; let lastHeader = -1; let seenData = false;
     lines.forEach((l, i) => {
-      if (i > 15) return;
+      if (i > 12 || seenData) return;
       const txt = l.cells.map(c => c.s).join('').replace(/\s+/g,'');
-      const isData = /\d{1,2}\s*\/\s*\d{1,2}/.test(txt) || /^\d{1,2}$/.test(txt);
-      if (!isData && PDF_HDR.some(([,re]) => re.test(txt))) {
+      if (/\d{1,2}\s*\/\s*\d{1,2}/.test(txt)) { seenData = true; return; }
+      const hits = PDF_HDR.filter(([,re]) => re.test(txt)).length;
+      if (hits >= 2) {
         lastHeader = Math.max(lastHeader, i);
         l.cells.forEach(c => hdrCells.push(c));
       }
