@@ -1560,6 +1560,37 @@ function rowsToSchedule(cellRows, opt){
   return out;
 }
 
+function rowsToScheduleWith(cellRows, map){
+  const year = num($('#upYear').value) || 2027;
+  const out = [];
+  const get = (cells, k) => (map[k] != null ? String(cells[map[k]] == null ? '' : cells[map[k]]) : '');
+  cellRows.forEach(cells => {
+    const joined = cells.join(' ').replace(/\s+/g,'');
+    if (/^(합계|총계|소계)/.test(joined)) return;
+    if (isHeaderRow(cells)) return;
+    const subject = get(cells,'과목').replace(/\s+/g,' ').trim();
+    const dateRaw = get(cells,'일자');
+    if (!subject && !dateRaw) return;
+    const d = dateText(dateRaw, year);
+    const teacher = parseTeachers(get(cells,'강사'));
+    const mark = k => isMark(get(cells,k));
+    const type = mark('전문') ? '전문' : mark('소양') ? '소양' : mark('취업') ? '취업' : '';
+    const mode = mark('온라인') ? '온라인' : mark('오프라인') ? '오프라인' : '';
+    out.push({
+      '회차': num(get(cells,'회차')) || (out.length+1),
+      '일자': d ? ymd(d) : dateRaw,
+      '요일': d ? DOW[d.getDay()] : '',
+      '강의과목': subject,
+      '이론': num(get(cells,'이론')), '실습': num(get(cells,'실습')),
+      '현장실습': num(get(cells,'현장실습')), '현장견학': num(get(cells,'현장견학')),
+      '주강사': teacher.main, '주강사소속': teacher.mainOrg,
+      '보조강사': teacher.sub, '보조강사소속': teacher.subOrg,
+      '훈련내용': type, '온오프라인': mode, '상태': '예정'
+    });
+  });
+  return out;
+}
+
 /* ── HWPX 파서 ── */
 async function parseHwpxFile(file){
   await loadScript(CDN_JSZIP, 'JSZip');
