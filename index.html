@@ -70,7 +70,7 @@
   header.top .inner{max-width:1040px;margin:0 auto;padding:16px 16px 13px}
   .hd-main{display:flex;align-items:center;gap:12px}
   h1#pageTitle{
-    flex:1 1 auto;min-width:0;margin:0;
+    flex:1 1 auto;min-width:0;margin:0;word-break:keep-all;overflow-wrap:anywhere;
     font-size:19px;line-height:1.35;font-weight:700;letter-spacing:-.035em;color:var(--ink);
   }
   .hd-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
@@ -280,7 +280,9 @@
   .empty b{display:block;color:var(--ink-2);font-size:14.5px;font-weight:600;margin-bottom:4px}
 
   /* ── 캘린더 ───────────────────────────────── */
-  .cal-top{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px;gap:8px}
+  .cal-top{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 10px;gap:8px}
+  .cal-title{display:flex;align-items:baseline;gap:8px}
+  .cal-count{font-size:12.5px;color:var(--ink-3);font-weight:500;font-variant-numeric:tabular-nums}
   .cal-month{font-size:16px;font-weight:700;letter-spacing:-.03em;color:var(--ink);font-variant-numeric:tabular-nums}
   .cal-nav{display:flex;gap:6px}
   .cal-nav button{
@@ -309,7 +311,7 @@
   .cal-cell.sun .cal-day{color:#e8590c}
   .cal-cell.sat .cal-day{color:#1c7ed6}
   .cal-cell.today .cal-day{background:var(--ink);color:#fff}
-  .cal-cell.sel{background:#f8fbff;box-shadow:inset 0 0 0 1.5px var(--accent)}
+  .cal-cell.sel{background:#f8fbff;border-radius:10px;box-shadow:inset 0 0 0 1.5px var(--accent)}
   .cal-cell.sel .cal-day{background:var(--accent);color:#fff}
   .cal-cell.today.sel .cal-day{background:var(--accent)}
   .ev{
@@ -480,6 +482,7 @@
     .c-meta{font-size:12.5px}
     .sum-card{padding:15px}
     .cal-cell{min-height:74px;padding:4px 3px 5px}
+    .cal-cell.sel{border-radius:8px}
     .cal-day{width:19px;height:19px;font-size:11px;margin:0 0 3px}
     .cal-dow div{font-size:11px;padding:7px 0}
     .ev{
@@ -1120,10 +1123,6 @@ function renderCalendar(area, rows){
     state.month = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
   }
   const [yy, mm] = state.month.split('-').map(Number);
-  const head = el('div','sec-title');
-  head.innerHTML = '<h2>캘린더</h2><span class="hint num">' + rows.length + '건 표시</span>';
-  area.appendChild(head);
-
   const byDay = {};
   rows.forEach(r => { if (!r._d) return; const k = ymd(r._d); (byDay[k] = byDay[k] || []).push(r); });
 
@@ -1142,7 +1141,8 @@ function renderCalendar(area, rows){
   }
 
   const top = el('div','cal-top');
-  top.innerHTML = '<div class="cal-month num">' + yy + '년 ' + mm + '월</div>' +
+  top.innerHTML = '<div class="cal-title"><span class="cal-month num">' + yy + '년 ' + mm + '월</span>' +
+    '<span class="cal-count num">' + rows.length + '건</span></div>' +
     '<div class="cal-nav"><button id="calPrev" aria-label="이전 달">‹</button><button id="calNext" aria-label="다음 달">›</button></div>';
   area.appendChild(top);
 
