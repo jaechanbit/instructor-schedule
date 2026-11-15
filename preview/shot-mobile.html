@@ -3,5 +3,6 @@
 <title>shot mobile 390</title>
 <style>html,body{margin:0;padding:0;background:#ffffff}iframe{display:block;border:0;width:390px;height:844px}</style>
 </head><body>
-<iframe src="../index.html"></iframe>
+<iframe id="f"></iframe>
+<script>document.getElementById('f').src = '../index.html?' + location.search.slice(1);</script>
 </body></html>
