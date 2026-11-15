@@ -492,6 +492,7 @@
     }
     .ev-n{font-size:9.5px;opacity:1}
     .ev-org{font-size:8.5px;background:transparent;padding:0;color:inherit;opacity:.8;letter-spacing:-.05em}
+    .ev-name{display:none}
     .ev-t{display:none}
     .ev-more{display:block;font-size:10px;padding:0;margin-top:1px;text-align:center}
     .cal-note{font-size:11.5px}
@@ -1170,7 +1171,7 @@ function renderCalendar(area, rows){
     items.slice(0,3).forEach(r => {
       const dup = !!(r._dups && r._dups.length);
       const b = el('button','ev s-' + (r['훈련내용']||'') + (dup ? ' is-dup' : ''),
-        (dup ? '<span class="ev-warn" aria-hidden="true">⚠' + esc(dupNames(r).slice(0,1).join('')) + '</span>' : '') +
+        (dup ? '<span class="ev-warn" aria-hidden="true">⚠<span class="ev-name">' + esc(dupNames(r).slice(0,1).join('')) + '</span></span>' : '') +
         '<span class="ev-n">' + esc(r['회차']) + '</span>' +
         '<span class="ev-org">' + esc(orgShort(r._org)) + '</span>' +
         '<span class="ev-t">' + esc((r['강의과목']||'').replace(/\s+/g,' ').slice(0,18)) + '</span>');
