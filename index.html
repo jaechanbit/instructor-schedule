@@ -343,21 +343,32 @@
   .cal-cell.sel .cal-day{background:var(--accent);color:#fff}
   .cal-cell.today.sel .cal-day{background:var(--accent)}
   .ev{
-    display:flex;align-items:center;gap:4px;width:100%;max-width:100%;min-width:0;text-align:left;
-    border:0;border-radius:5px;padding:1px 5px;margin-bottom:3px;
-    font-size:11px;font-weight:600;letter-spacing:-.015em;line-height:1.5;
+    display:flex;flex-direction:column;align-items:stretch;gap:0;width:100%;max-width:100%;min-width:0;text-align:left;
+    border:0;border-radius:6px;padding:1px 6px 2px;margin-bottom:2px;
+    font-size:11px;font-weight:600;letter-spacing:-.015em;line-height:1.35;
     background:var(--accent-soft);color:#1e40af;overflow:hidden;white-space:nowrap;
   }
+  .ev-l1{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden}
+  .ev-l2{display:flex;align-items:baseline;gap:4px;min-width:0;margin-top:1px;overflow:hidden}
   .ev-n{font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto;opacity:.85}
   .ev-org{
     flex:0 0 auto;font-size:9.5px;font-weight:700;letter-spacing:-.03em;
     background:rgba(25,31,40,.06);border-radius:3px;padding:0 3px;color:#3d4a5c;
   }
-  .ev-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+  .ev-name{
+    flex:0 0 auto;max-width:6.4em;font-size:10.5px;font-weight:800;letter-spacing:-.04em;
+    color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .ev-l2 .ev-t{
+    flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-weight:500;font-size:10.5px;opacity:.72;
+  }
+  .ev-warn .ev-name{font-size:inherit;max-width:none;color:inherit;letter-spacing:inherit}
   .ev.s-소양{background:#eafaf3;color:#0b7a5b}
   .ev.s-취업{background:#fff3e8;color:#a15c00}
   .ev:hover{filter:brightness(.97)}
   .ev-more{font-size:10.5px;color:var(--ink-3);font-weight:600;padding-left:5px}
+  .cal-note .note-pc{color:var(--ink-2)}
   .cal-note{
     display:flex;align-items:center;gap:6px;flex-wrap:wrap;
     font-size:12px;color:var(--ink-3);margin:10px 2px 0;line-height:1.6;
@@ -520,8 +531,10 @@
     }
     .ev-n{font-size:9.5px;opacity:1}
     .ev-org{font-size:8.5px;background:transparent;padding:0;color:inherit;opacity:.8;letter-spacing:-.05em}
+    .ev-l2{display:none}
     .ev-name{display:none}
     .ev-t{display:none}
+    .cal-note .note-pc{display:none}
     .ev-more{display:block;font-size:10px;padding:0;margin-top:1px;text-align:center}
     .cal-note{font-size:11.5px}
     #dayDetail .dd-head{font-size:13px}
@@ -1208,14 +1221,20 @@ function renderCalendar(area, rows){
     const dupCount = items.filter(r => r._dups && r._dups.length).length;
     items.slice(0,3).forEach(r => {
       const dup = !!(r._dups && r._dups.length);
+      const teacher = String(r['주강사'] || '').trim() || '강사 미정';
       const b = el('button','ev s-' + (r['훈련내용']||'') + (dup ? ' is-dup' : ''),
-        (dup ? '<span class="ev-warn" aria-hidden="true">⚠<span class="ev-name">' + esc(dupNames(r).slice(0,1).join('')) + '</span></span>' : '') +
-        '<span class="ev-n">' + esc(r['회차']) + '</span>' +
-        '<span class="ev-org">' + esc(orgShort(r._org)) + '</span>' +
-        '<span class="ev-t">' + esc((r['강의과목']||'').replace(/\s+/g,' ').slice(0,18)) + '</span>');
+        '<span class="ev-l1">' +
+          (dup ? '<span class="ev-warn" aria-hidden="true">⚠<span class="ev-name">' + esc(dupNames(r).slice(0,1).join('')) + '</span></span>' : '') +
+          '<span class="ev-n">' + esc(r['회차']) + '</span>' +
+          '<span class="ev-org">' + esc(orgShort(r._org)) + '</span>' +
+        '</span>' +
+        '<span class="ev-l2">' +
+          '<span class="ev-name">' + esc(teacher) + '</span>' +
+          '<span class="ev-t">' + esc((r['강의과목']||'').replace(/\s+/g,' ').slice(0,18)) + '</span>' +
+        '</span>');
       b.title = (dup ? dupTitle(r) + ' · ' : '') + r._org + ' ' + r['회차'] + '회차 · ' + r['강의과목'] + ' · ' + (r['주강사']||'');
       b.onclick = ev => { ev.stopPropagation(); state.day = key; state.dayInit = true; renderView(); };
-      b.setAttribute('aria-label', r._org + ' ' + r['회차'] + '회차 ' + r['강의과목']);
+      b.setAttribute('aria-label', r._org + ' ' + r['회차'] + '회차 ' + teacher + ' ' + r['강의과목']);
       cell.appendChild(b);
     });
     if (items.length > 3) cell.appendChild(el('div','ev-more','+' + (items.length - 3)));
@@ -1244,6 +1263,7 @@ function renderCalendar(area, rows){
   area.appendChild(cal);
   area.appendChild(el('div','cal-note',
     '<span class="lg 전문"></span>전문 <span class="lg 소양"></span>소양 <span class="lg 취업"></span>취업 <span class="lg dup"></span>중복'+
+    '<span class="note-pc" style="margin-left:2px">· 칸 둘째 줄 굵은 이름이 주강사</span>'+
     '<span style="margin-left:2px">· 날짜를 누르면 그날 강의가 아래에 펼쳐집니다.</span>'));
   $('#calPrev').onclick = () => { let y = yy, m = mm-1; if (m < 1) { m = 12; y--; } state.month = y + '-' + String(m).padStart(2,'0'); state.day = null; state.dayInit = false; renderView(); };
   $('#calNext').onclick = () => { let y = yy, m = mm+1; if (m > 12) { m = 1; y++; } state.month = y + '-' + String(m).padStart(2,'0'); state.day = null; state.dayInit = false; renderView(); };
