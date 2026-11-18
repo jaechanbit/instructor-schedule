@@ -1222,9 +1222,10 @@ function renderCalendar(area, rows){
     items.slice(0,3).forEach(r => {
       const dup = !!(r._dups && r._dups.length);
       const teacher = String(r['주강사'] || '').trim() || '강사 미정';
+      const dupWho = dup ? dupNames(r).filter(n => n && n !== teacher) : [];
       const b = el('button','ev s-' + (r['훈련내용']||'') + (dup ? ' is-dup' : ''),
         '<span class="ev-l1">' +
-          (dup ? '<span class="ev-warn" aria-hidden="true">⚠<span class="ev-name">' + esc(dupNames(r).slice(0,1).join('')) + '</span></span>' : '') +
+          (dup ? '<span class="ev-warn" aria-hidden="true">⚠' + (dupWho.length ? '<span class="ev-name">' + esc(dupWho.slice(0,1).join('')) + '</span>' : '') + '</span>' : '') +
           '<span class="ev-n">' + esc(r['회차']) + '</span>' +
           '<span class="ev-org">' + esc(orgShort(r._org)) + '</span>' +
         '</span>' +
